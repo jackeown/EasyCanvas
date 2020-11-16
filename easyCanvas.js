@@ -14,8 +14,46 @@ function linearScale(d1, d2, r1, r2){
 }
 window.linearScale = linearScale;
 
+function loggy(message){
+    document.getElementById("logs").innerHTML = message;
+}
+
+
+// every pair of points corresponds to a square 
+// which we use for finding scales.
+function getScalesFromPoints(oldPoints, newPoints){
+    let distOld = dist(...oldPoints);
+    let distNew = dist(...newPoints);
+    
+    let s = distNew / distOld;
+    let sx = s;
+    let sy = s;
+
+    let oldMidX = (oldPoints[0].x + oldPoints[1].x)/2
+    let oldMidY = (oldPoints[0].y + oldPoints[1].y)/2
+    
+    let newMidX = (newPoints[0].x + newPoints[1].x)/2
+    let newMidY = (newPoints[0].y + newPoints[1].y)/2
+
+    if (oldPoints[0].x < this.xmin && oldPoints[1].x < this.xmin){
+        // scaling only along y-axis
+        sx=1;
+        newMidX = oldMidX;
+    }
+    if (oldPoints[0].y < this.ymin && oldPoints[1].y < this.ymin){
+        // scaling only along x-axis
+        sy=1;
+        newMidY = oldMidY
+    }
+    
+    let scaleX = linearScale(newMidX, newMidX+sx, oldMidX, oldMidX+1);
+    let scaleY = linearScale(newMidY, newMidY+sy, oldMidY, oldMidY+1);
+    
+    return [scaleX, scaleY];
+}
+
 class EasyCanvas extends HTMLElement {
-    static get observedAttributes(){ return ["xmin", "xmax", "ymin", "ymax", "framerate", "paddingX", "paddingY", "default-axes-on","controls"];}
+    static get observedAttributes(){ return ["xmin", "xmax", "ymin", "ymax", "framerate", "paddingX", "paddingY", "default-axes-on", "controls"];}
     
     constructor() {
         // Always call super first in constructor
@@ -125,144 +163,68 @@ class EasyCanvas extends HTMLElement {
 
         // touch events:
         this.canvas.addEventListener("touchstart", function(e){
-            if(e.touches.length == 1){
-                this.oneFingerStartEvent = e;
-                this.oldScales = {
-                    scaleX: this.scaleX,
-                    scaleY: this.scaleY,
-                    scaleXInverse: this.scaleXInverse,
-                    scaleYInverse: this.scaleYInverse
-                }
-
-                this.oldxmin = this.xmin;
-                this.oldxmax = this.xmax;
-                this.oldymin = this.ymin;
-                this.oldymax = this.ymax;
-                e.preventDefault();
-            }
             if(e.touches.length == 2){
                 this.twoFingerStartEvent = e;
-                this.oldScales = {
-                    scaleX: this.scaleX,
-                    scaleY: this.scaleY,
-                    scaleXInverse: this.scaleXInverse,
-                    scaleYInverse: this.scaleYInverse
-                }
-
-                this.oldxmin = this.xmin;
-                this.oldxmax = this.xmax;
-                this.oldymin = this.ymin;
-                this.oldymax = this.ymax;
+                this.saveScalesAndRanges();
                 e.preventDefault();
             }
         }.bind(this));
 
+
+
+
+
         this.canvas.addEventListener("touchmove", function(e){
-            
-            let pinchScaleX = linearScale(0,1,0,1);
-            let pinchScaleY = linearScale(0,1,0,1);
-
-            // zooming.
-            if(e.touches.length == 1){
-                let {pageX: x1New, pageY: y1New} = e.touches[0];
-                let {pageX: x1Old, pageY: y1Old} = this.oneFingerStartEvent.touches[0];
-                x1New = this.oldScales["scaleXInverse"]((x1New-this.canvas.offsetLeft)*this.dpr);
-                x1Old = this.oldScales["scaleXInverse"]((x1Old-this.canvas.offsetLeft)*this.dpr);
-                y1New = this.oldScales["scaleYInverse"]((y1New-this.canvas.offsetTop)*this.dpr);
-                y1Old = this.oldScales["scaleYInverse"]((y1Old-this.canvas.offsetTop)*this.dpr);
-
-                let xdiff = ((x1Old - x1New) + (x2Old - x2New))/2;
-                let ydiff = ((y1Old - y1New) + (y2Old - y2New))/2;
-
-                pinchScaleX = linearScale(0,1, xdiff, xdiff+1);
-                pinchScaleY = linearScale(0,1, ydiff, ydiff+1);
-            }
             if(e.touches.length == 2){
+                // Get new and old touch positions
                 let {pageX: x1New, pageY: y1New} = e.touches[0];
                 let {pageX: x2New, pageY: y2New} = e.touches[1];
 
                 let {pageX: x1Old, pageY: y1Old} = this.twoFingerStartEvent.touches[0];
                 let {pageX: x2Old, pageY: y2Old} = this.twoFingerStartEvent.touches[1];
 
-                x1New = this.oldScales["scaleXInverse"]((x1New-this.canvas.offsetLeft)*this.dpr);
-                x1Old = this.oldScales["scaleXInverse"]((x1Old-this.canvas.offsetLeft)*this.dpr);
-                x2New = this.oldScales["scaleXInverse"]((x2New-this.canvas.offsetLeft)*this.dpr);
-                x2Old = this.oldScales["scaleXInverse"]((x2Old-this.canvas.offsetLeft)*this.dpr);
-
-                y1New = this.oldScales["scaleYInverse"]((y1New-this.canvas.offsetTop)*this.dpr);
-                y1Old = this.oldScales["scaleYInverse"]((y1Old-this.canvas.offsetTop)*this.dpr);
-                y2New = this.oldScales["scaleYInverse"]((y2New-this.canvas.offsetTop)*this.dpr);
-                y2Old = this.oldScales["scaleYInverse"]((y2Old-this.canvas.offsetTop)*this.dpr);
-
-                let s = dist(x1Old, y1Old, x2Old, y2Old) / dist(x1New, y1New, x2New, y2New);
-
-                let midX = (x1Old + x2Old)/2;
-                let midY = (y1Old + y2Old)/2;
-                let radiusX = Math.abs(x1Old - midX);
-                let radiusY = Math.abs(y1Old - midY);
-                y1New = this.oldScales["scaleYInverse"]((y1New-this.canvas.offsetTop)*this.dpr);
-                y1Old = this.oldScales["scaleYInverse"]((y1Old-this.canvas.offsetTop)*this.dpr);
-
-                // let panning = (0.85 < s && s < 1.15);
-                let panning = false;
-
-                if(!panning){
-                    if(x1Old < this.xmin && x2Old < this.xmin){ // both fingers on y-axis (scale vertically)
-                        pinchScaleY = linearScale(midY-radiusY, midY+radiusY, midY-radiusY*s, midY+radiusY*s);
+                // Rescale touch positions
+                let oldPoints = [
+                    {
+                        x: this.oldScales["scaleXInverse"]((x1Old-this.canvas.offsetLeft)*this.dpr),
+                        y: this.oldScales["scaleYInverse"]((y1Old-this.canvas.offsetTop)*this.dpr)
+                    },
+                    {
+                        x: this.oldScales["scaleXInverse"]((x2Old-this.canvas.offsetLeft)*this.dpr),
+                        y: this.oldScales["scaleYInverse"]((y2Old-this.canvas.offsetTop)*this.dpr)
                     }
-                    else if(y1Old < this.ymin && y2Old < this.ymin){ // both fingers on x-axis (scale horizontally)
-                        pinchScaleX = linearScale(midX-radiusX, midX+radiusX, midX-radiusX*s, midX+radiusX*s);
+                ]
+
+                let newPoints = [
+                    {
+                        x: this.oldScales["scaleXInverse"]((x1New-this.canvas.offsetLeft)*this.dpr),
+                        y: this.oldScales["scaleYInverse"]((y1New-this.canvas.offsetTop)*this.dpr)
+                    },
+                    {
+                        x: this.oldScales["scaleXInverse"]((x2New-this.canvas.offsetLeft)*this.dpr),
+                        y: this.oldScales["scaleYInverse"]((y2New-this.canvas.offsetTop)*this.dpr)
                     }
-                    else{ // scale diagonally.
-                        pinchScaleX = linearScale(midX-radiusX, midX+radiusX, midX-radiusX*s, midX+radiusX*s);
-                        pinchScaleY = linearScale(midY-radiusY, midY+radiusY, midY-radiusY*s, midY+radiusY*s);
-                    }
-                    // old
-                    // let pinchScaleX = linearScale(x1New, x2New, x1Old, x2Old);
-                    // let pinchScaleY = linearScale(y1New, y2New, y1Old, y2Old);
-                }
-                else{
-                    let xdiff = ((x1Old - x1New) + (x2Old - x2New))/2;
-                    let ydiff = ((y1Old - y1New) + (y2Old - y2New))/2;
+                ]
+
+                let [pinchScaleX, pinchScaleY] = getScalesFromPoints.bind(this)(oldPoints, newPoints)
+
+                this.setAttribute("xmin", pinchScaleX(this.oldxmin));
+                this.setAttribute("xmax", pinchScaleX(this.oldxmax));
     
-                    pinchScaleX = linearScale(0,1, xdiff, xdiff+1);
-                    pinchScaleY = linearScale(0,1, ydiff, ydiff+1);
-                }
-
+                this.setAttribute("ymin", pinchScaleY(this.oldymin));
+                this.setAttribute("ymax", pinchScaleY(this.oldymax));
+    
+                this.renderPlot();
+                e.preventDefault();
             }
-            else{
-                return;
-            }
-
-
-            this.setAttribute("xmin", pinchScaleX(this.oldxmin));
-            this.setAttribute("xmax", pinchScaleX(this.oldxmax));
-
-            this.setAttribute("ymin", pinchScaleY(this.oldymin));
-            this.setAttribute("ymax", pinchScaleY(this.oldymax));
-
-            this.renderPlot();
-
         }.bind(this));
 
+
+
+
+
         this.canvas.addEventListener("touchend", function(e){
-            if([1,2].includes(e.touches.length)){
-                this.oldScales = {
-                    scaleX: this.scaleX,
-                    scaleY: this.scaleY,
-                    scaleXInverse: this.scaleXInverse,
-                    scaleYInverse: this.scaleYInverse
-                }
-    
-                this.oldxmin = this.xmin;
-                this.oldxmax = this.xmax;
-                this.oldymin = this.ymin;
-                this.oldymax = this.ymax;
-            }
-            if(e.touches.length == 1){
-                this.oneFingerStartEvent = e;
-            }
-            else if(e.touches.length == 2){
+            if(e.touches.length == 2){
                 this.twoFingerStartEvent = e;
             }
         }.bind(this));
@@ -308,6 +270,19 @@ class EasyCanvas extends HTMLElement {
 
     }
 
+    saveScalesAndRanges(){
+        this.oldScales = {
+            scaleX: this.scaleX,
+            scaleY: this.scaleY,
+            scaleXInverse: this.scaleXInverse,
+            scaleYInverse: this.scaleYInverse
+        }
+
+        this.oldxmin = this.xmin;
+        this.oldxmax = this.xmax;
+        this.oldymin = this.ymin;
+        this.oldymax = this.ymax;
+    }
 
     attributeChangedCallback(name, oldValue, newValue) {
         if(this.debug)
@@ -566,16 +541,15 @@ class EasyCanvas extends HTMLElement {
     // in custom coordinates, not canvas coordinates
     mouseInCircle(cx, cy, r){
         if(this.mouseX === undefined || this.mouseY === undefined){
-            return undefined;
+            return false;
         }
-        let dist = (x1,y1,x2,y2) => Math.sqrt(Math.pow(x2-x1,2) + Math.pow(y2-y1,2))
-        return (dist(this.mouseX,this.mouseY,cx,cy) < r)
+        return dist(this.mouseX,this.mouseY,cx,cy) < r
     }
 
     // opposite corners of a rectangle.
     mouseInRect(x1, y1, x2, y2){
         if(this.mouseX === undefined || this.mouseY === undefined){
-            return undefined;
+            return false;
         }
 
         // helper function to tell if x is between a and b.

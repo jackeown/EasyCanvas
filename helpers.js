@@ -19,6 +19,10 @@ function dist(x1,y1,x2,y2){
     return Math.sqrt(Math.pow(x2-x1,2) + Math.pow(y2-y1,2));
 }
 
+function dist(p, q){
+    return Math.sqrt(Math.pow(q.x - p.x,2) + Math.pow(q.y - p.y,2));
+}
+
 function getTimeLabel(i,nTicks, scaleStart, scaleEnd){
     let start = new Date(scaleStart);
     let now = new Date(scaleStart + (scaleEnd-scaleStart)*(i/nTicks));

@@ -16,14 +16,17 @@ function defaultVals(obj,keys,defs){
 }
 
 function dist(x1,y1,x2,y2){
+    // compute pointwise distance treating x1 as one point and y1 as another.
+    // hack because js doesn't have function overloading...
+    if(x2 === undefined && y2 === undefined){
+        return dist(x1.x, x1.y, y1.x, y1.y);
+    }
+
     return Math.sqrt(Math.pow(x2-x1,2) + Math.pow(y2-y1,2));
 }
 
-function dist(p, q){
-    return Math.sqrt(Math.pow(q.x - p.x,2) + Math.pow(q.y - p.y,2));
-}
 
-function getTimeLabel(i,nTicks, scaleStart, scaleEnd){
+function getTimeLabel(i, nTicks, scaleStart, scaleEnd){
     let start = new Date(scaleStart);
     let now = new Date(scaleStart + (scaleEnd-scaleStart)*(i/nTicks));
     let end = new Date(scaleEnd);
@@ -75,14 +78,6 @@ function getTimeLabel(i,nTicks, scaleStart, scaleEnd){
     return label;
 }
 
-
-
-
-// BEGIN MOBILE STUFF ///////////////////////////////
-
-
-
-// END MOBILE STUFF /////////////////////////////////
 
 
 

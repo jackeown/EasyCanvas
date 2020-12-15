@@ -51,7 +51,20 @@ function getScalesFromPoints(oldPoints, newPoints){
 }
 
 class EasyCanvas extends HTMLElement {
-    static get observedAttributes(){ return ["xmin", "xmax", "ymin", "ymax", "framerate", "paddingX", "paddingY", "default-axes-on", "controls"];}
+    static get observedAttributes(){ 
+        return [
+            "xmin",
+            "xmax",
+            "ymin",
+            "ymax",
+            "framerate",
+            "paddingX",
+            "paddingY",
+            "default-axes-on",
+            "controls",
+            "fontsize"
+        ];
+    }
     
     constructor() {
         // Always call super first in constructor
@@ -237,7 +250,7 @@ class EasyCanvas extends HTMLElement {
         
         this.defaultAxesOn = true;
         this.mouseDown = false; // left mouse button is not clicked in when the webpage loads...
-        
+        this.fontsize = 12;
         this.updateScales();
 
         // bind all methods from easyCanvasHotAndReady
@@ -272,7 +285,7 @@ class EasyCanvas extends HTMLElement {
             console.log(`custom element attribute "${name}" has changed from "${oldValue}" to "${newValue}"`);
         
         // simple numeric
-        if(["xmin", "xmax", "ymin", "ymax", "paddingX", "paddingY", "framerate"].includes(name)){
+        if(["xmin", "xmax", "ymin", "ymax", "paddingX", "paddingY", "framerate", "fontsize"].includes(name)){
             this[name] = +newValue;
             this.updateScales();
         }
@@ -325,7 +338,7 @@ class EasyCanvas extends HTMLElement {
             this.DPIHasBeenSet = true;
         }
 
-        this.fontSizeScalar = (this.canvas.width+this.canvas.height) / 1500;
+        this.fontSizeScalar = ((this.canvas.width+this.canvas.height) / (30000) * this.fontsize);
 
         this.renderPlot();
     }

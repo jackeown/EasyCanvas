@@ -19,9 +19,7 @@ function loggy(message){
     document.getElementById("logs").innerHTML = message;
 }
 
-
-// every pair of points corresponds to a square 
-// which we use for finding scales.
+// For mobile zooming / panning
 function getScalesFromPoints(oldPoints, newPoints){
     let distOld = dist(...oldPoints);
     let distNew = dist(...newPoints);
@@ -36,13 +34,13 @@ function getScalesFromPoints(oldPoints, newPoints){
     let newMidX = (newPoints[0].x + newPoints[1].x)/2
     let newMidY = (newPoints[0].y + newPoints[1].y)/2
 
+    // scaling only along y-axis
     if (oldPoints[0].x < this.xmin && oldPoints[1].x < this.xmin){
-        // scaling only along y-axis
         sx=1;
         newMidX = oldMidX;
     }
+    // scaling only along x-axis
     if (oldPoints[0].y < this.ymin && oldPoints[1].y < this.ymin){
-        // scaling only along x-axis
         sy=1;
         newMidY = oldMidY
     }
@@ -74,16 +72,14 @@ class EasyCanvas extends HTMLElement {
             // get size of padding in data units.
             let padXPixels = (this.paddingX/100)*this.canvas.width;
             let padYPixels = (this.paddingY/100)*this.canvas.height;
+
+            // data coordinates of actual canvas boundary.
             let px = Math.abs(this.scaleXInverse(padXPixels) - this.scaleXInverse(0));
             let py = Math.abs(this.scaleYInverse(padYPixels) - this.scaleYInverse(0));
 
-            // make scales which are slightly different from this.scaleXInverse and this.scaleYInverse
-            let pinchScaleX = linearScale(0, this.canvas.width, this.xmin-px, this.xmax+px)
-            let pinchScaleY = linearScale(0, this.canvas.height, this.ymax+py, this.ymin-py)
+            this.mouseX = this.scaleXInverse(e.offsetX*this.dpr);
+            this.mouseY = this.scaleYInverse(e.offsetY*this.dpr);
 
-            this.mouseX = pinchScaleX(e.offsetX*this.dpr)
-            this.mouseY = pinchScaleY(e.offsetY*this.dpr)
-            
         }.bind(this));
 
         this.canvas.addEventListener("mouseleave",function(e){
@@ -100,8 +96,8 @@ class EasyCanvas extends HTMLElement {
                 let dx = this.scaleXInverse(e.movementX)-this.scaleXInverse(0);
                 let dy = this.scaleYInverse(e.movementY)-this.scaleYInverse(0);
 
-                dx *= 2;
-                dy *= 2;
+                dx *= this.dpr;
+                dy *= this.dpr;
     
                 this.xmin -= dx;
                 this.xmax -= dx;
@@ -172,39 +168,30 @@ class EasyCanvas extends HTMLElement {
         }.bind(this));
 
 
-
-
-
         this.canvas.addEventListener("touchmove", function(e){
             if(e.touches.length == 2){
-                // Get new and old touch positions
+                // Get old and new touch positions
+                let {pageX: x1Old, pageY: y1Old} = this.twoFingerStartEvent.touches[0];
+                let {pageX: x2Old, pageY: y2Old} = this.twoFingerStartEvent.touches[1];
+                
                 let {pageX: x1New, pageY: y1New} = e.touches[0];
                 let {pageX: x2New, pageY: y2New} = e.touches[1];
 
-                let {pageX: x1Old, pageY: y1Old} = this.twoFingerStartEvent.touches[0];
-                let {pageX: x2Old, pageY: y2Old} = this.twoFingerStartEvent.touches[1];
+                // some quick defines to make the next bit more concise.
+                let [sxi, syi] = [this.oldScales["scaleXInverse"], this.oldScales["scaleYInverse"]]
+                let dpr = this.dpr;
+                let left = this.canvas.offsetLeft;
+                let top = this.canvas.offsetTop;
 
-                // Rescale touch positions
+                // Rescale old and new touch positions
                 let oldPoints = [
-                    {
-                        x: this.oldScales["scaleXInverse"]((x1Old-this.canvas.offsetLeft)*this.dpr),
-                        y: this.oldScales["scaleYInverse"]((y1Old-this.canvas.offsetTop)*this.dpr)
-                    },
-                    {
-                        x: this.oldScales["scaleXInverse"]((x2Old-this.canvas.offsetLeft)*this.dpr),
-                        y: this.oldScales["scaleYInverse"]((y2Old-this.canvas.offsetTop)*this.dpr)
-                    }
+                    {x: sxi((x1Old-left)*dpr), y: syi((y1Old-top)*dpr)},
+                    {x: sxi((x2Old-left)*dpr), y: syi((y2Old-top)*dpr)}
                 ]
 
                 let newPoints = [
-                    {
-                        x: this.oldScales["scaleXInverse"]((x1New-this.canvas.offsetLeft)*this.dpr),
-                        y: this.oldScales["scaleYInverse"]((y1New-this.canvas.offsetTop)*this.dpr)
-                    },
-                    {
-                        x: this.oldScales["scaleXInverse"]((x2New-this.canvas.offsetLeft)*this.dpr),
-                        y: this.oldScales["scaleYInverse"]((y2New-this.canvas.offsetTop)*this.dpr)
-                    }
+                    {x: sxi((x1New-left)*dpr), y: syi((y1New-top)*dpr)},
+                    {x: sxi((x2New-left)*dpr), y: syi((y2New-top)*dpr)}
                 ]
 
                 let [pinchScaleX, pinchScaleY] = getScalesFromPoints.bind(this)(oldPoints, newPoints)
@@ -221,15 +208,11 @@ class EasyCanvas extends HTMLElement {
         }.bind(this));
 
 
-
-
-
         this.canvas.addEventListener("touchend", function(e){
             if(e.touches.length == 2){
                 this.twoFingerStartEvent = e;
             }
         }.bind(this));
-
 
 
 
@@ -251,7 +234,7 @@ class EasyCanvas extends HTMLElement {
         this.ymin = -100;
         this.ymax = 100;
 
-        this.dpr = 2.0; // device pixel ratio.
+        this.dpr = 2; // device pixel ratio.
         
         this.defaultAxesOn = true;
         this.mouseDown = false; // left mouse button is not clicked in when the webpage loads...
@@ -317,6 +300,7 @@ class EasyCanvas extends HTMLElement {
         let padXPixels = (this.paddingX/100)*w;
         let padYPixels = (this.paddingY/100)*h;
 
+        // map the range of the data to the range of the canvas where data should appear.
         this.scaleX = linearScale(this.xmin, this.xmax, padXPixels, w - padXPixels);
         this.scaleY = linearScale(this.ymin, this.ymax, h - padYPixels, padYPixels);
         this.scaleXInverse = linearScale(padXPixels, w - padXPixels, this.xmin, this.xmax);
@@ -334,6 +318,8 @@ class EasyCanvas extends HTMLElement {
         //scale the canvas
         let heightDiff = Math.abs(this.canvas.height - style_height*this.dpr)
         let widthDiff = Math.abs(this.canvas.width - style_width*this.dpr)
+
+        // don't need to update canvas height or width unless they have changed significantly recently
         if(Math.max(heightDiff, widthDiff) > 10){
             this.canvas.height = style_height*this.dpr;
             this.canvas.width = style_width*this.dpr;
@@ -544,7 +530,7 @@ class EasyCanvas extends HTMLElement {
         if(this.mouseX === undefined || this.mouseY === undefined){
             return false;
         }
-        return dist(this.mouseX,this.mouseY,cx,cy) < r
+        return (dist(this.mouseX,this.mouseY,cx,cy) < r)
     }
 
     // opposite corners of a rectangle.
@@ -1005,14 +991,17 @@ function defaultVals(obj,keys,defs){
 }
 
 function dist(x1,y1,x2,y2){
+    // compute pointwise distance treating x1 as one point and y1 as another.
+    // hack because js doesn't have function overloading...
+    if(x2 === undefined && y2 === undefined){
+        return dist(x1.x, x1.y, y1.x, y1.y);
+    }
+
     return Math.sqrt(Math.pow(x2-x1,2) + Math.pow(y2-y1,2));
 }
 
-function dist(p, q){
-    return Math.sqrt(Math.pow(q.x - p.x,2) + Math.pow(q.y - p.y,2));
-}
 
-function getTimeLabel(i,nTicks, scaleStart, scaleEnd){
+function getTimeLabel(i, nTicks, scaleStart, scaleEnd){
     let start = new Date(scaleStart);
     let now = new Date(scaleStart + (scaleEnd-scaleStart)*(i/nTicks));
     let end = new Date(scaleEnd);
@@ -1064,14 +1053,6 @@ function getTimeLabel(i,nTicks, scaleStart, scaleEnd){
     return label;
 }
 
-
-
-
-// BEGIN MOBILE STUFF ///////////////////////////////
-
-
-
-// END MOBILE STUFF /////////////////////////////////
 
 
 

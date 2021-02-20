@@ -51,7 +51,20 @@ function getScalesFromPoints(oldPoints, newPoints){
 }
 
 class EasyCanvas extends HTMLElement {
-    static get observedAttributes(){ return ["xmin", "xmax", "ymin", "ymax", "framerate", "paddingX", "paddingY", "default-axes-on", "controls"];}
+    static get observedAttributes(){ 
+        return [
+            "xmin",
+            "xmax",
+            "ymin",
+            "ymax",
+            "framerate",
+            "paddingX",
+            "paddingY",
+            "default-axes-on",
+            "controls",
+            "fontsize"
+        ];
+    }
     
     constructor() {
         // Always call super first in constructor
@@ -237,7 +250,7 @@ class EasyCanvas extends HTMLElement {
         
         this.defaultAxesOn = true;
         this.mouseDown = false; // left mouse button is not clicked in when the webpage loads...
-        
+        this.fontSize = 25;
         this.updateScales();
 
         // bind all methods from easyCanvasHotAndReady
@@ -272,7 +285,7 @@ class EasyCanvas extends HTMLElement {
             console.log(`custom element attribute "${name}" has changed from "${oldValue}" to "${newValue}"`);
         
         // simple numeric
-        if(["xmin", "xmax", "ymin", "ymax", "paddingX", "paddingY", "framerate"].includes(name)){
+        if(["xmin", "xmax", "ymin", "ymax", "paddingX", "paddingY", "framerate", "fontsize"].includes(name)){
             this[name] = +newValue;
             this.updateScales();
         }
@@ -324,8 +337,6 @@ class EasyCanvas extends HTMLElement {
             this.canvas.width = style_width*this.dpr;
             this.DPIHasBeenSet = true;
         }
-
-        this.fontSizeScalar = (this.canvas.width+this.canvas.height) / 1500;
 
         this.renderPlot();
     }
@@ -442,7 +453,7 @@ class EasyCanvas extends HTMLElement {
                 y: labelY, 
                 theta: labelTheta, 
                 textAlign: "center",
-                font: `${this.fontSizeScalar*20}px Lato`
+                font: `${this.fontSize}px Lato`
             };
             if(labels){
                 labelSettings.text = labels[i-1];
@@ -475,7 +486,7 @@ class EasyCanvas extends HTMLElement {
         let [xAxisIsTime,yAxisIsTime] = defaultVals(settings,["xAxisIsTime","yAxisIsTime"],[false,false]);
 
         // x-axis
-        let labelYOffset = this.scaleYInverse(30*this.fontSizeScalar)-this.scaleYInverse(0);
+        let labelYOffset = this.scaleYInverse(this.fontSize + 10)-this.scaleYInverse(0);
         this.drawAxis({
             x1:this.xmin,
             y1: this.ymin,
@@ -492,7 +503,7 @@ class EasyCanvas extends HTMLElement {
         })
     
         // y-axis
-        let labelXOffset = this.scaleXInverse(-20*this.fontSizeScalar)-this.scaleXInverse(0);
+        let labelXOffset = this.scaleXInverse(-(this.fontSize + 10))-this.scaleXInverse(0);
         this.drawAxis({
             x1:this.xmin,
             y1: this.ymin,

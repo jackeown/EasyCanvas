@@ -1,0 +1,51 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Easy Canvas Testing</title>
+</head>
+<body>
+    <script src="./easyCanvas.bundle.js"></script>
+
+    <easy-canvas id="example1" 
+    framerate="1.0" 
+    xmin="0" 
+    xmax="6.2799999999999105" 
+    ymin="-0.9999987317275395" 
+    ymax="1" 
+    default-axes-on="false"
+    fontsize="14"></easy-canvas>
+    <script>
+        function range(a,b,delta=0.01){
+            let l = [];
+            for(let i=a;i<b;i+=delta){
+                l.push(i);
+            }
+            return l;
+        }
+    
+        const data1 = {
+            xs: range(0,2*Math.PI), // arbitrary name
+            sine: range(0,2*Math.PI).map(v => Math.sin(v)), // arbitrary name
+            cosine: range(0,2*Math.PI).map(v => Math.cos(v)) // arbitrary name
+        }
+    
+        const settings1 = {
+            title: "Sine and Cosine",
+            xLabel: "xs",
+            yLabel: "sine and cosine",
+            inputs: ["xs","xs"],
+            outputs: ["sine","cosine"],
+            legendLabels: ["Sine","Cosine"],
+            tooltips: ["sine", "cosine"]
+        }
+    
+        // ec1 because this is the first example canvas
+        const ec1 = document.getElementById("example1");
+        ec1.debug=true;
+        ec1.drawingLoop = function(){
+            this.hotAndReady.linePlot(data1, settings1);
+        }.bind(ec1);
+    </script>
+</body>
+</html>

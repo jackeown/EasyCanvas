@@ -9,8 +9,8 @@ let {defaultColors, zip, defaultVal, defaultVals, dist, getTimeLabel} = helpers;
 // tools
 function drawTooltip(x,y,info){
     let padding = 10;
-    let lineHeight = this.fontSizeScalar*22;
-    let letterWidth = this.fontSizeScalar*10;
+    let lineHeight = this.fontSize;
+    let letterWidth = this.fontSize / 2;
 
     let keys = Object.keys(info);
     let values = Object.values(info);
@@ -49,21 +49,21 @@ function drawTooltip(x,y,info){
         let labelSettings = {x: x1, y: y1, textBaseline: "bottom"}
 
         labelSettings.text = label[0];
-        labelSettings.font = `bold ${this.fontSizeScalar*20}px Lato`;
+        labelSettings.font = `bold ${this.fontSize}px Lato`;
         this.drawLabel(labelSettings);
         
         labelSettings.x += (letterWidth*label[0].length);
         labelSettings.text = label[1];
-        labelSettings.font = `${this.fontSizeScalar*20}px Lato`;
+        labelSettings.font = `${this.fontSize}px Lato`;
         this.drawLabel(labelSettings);
     }
 }
 
 function drawLegend(labels, settings){
-    let padding = this.fontSizeScalar*10;
-    let lineHeight = this.fontSizeScalar*20;
-    let letterWidth = this.fontSizeScalar*9;
-    let patchSize = this.fontSizeScalar*15;
+    let padding = this.fontSize / 2;
+    let lineHeight = this.fontSize;
+    let letterWidth = this.fontSize / 2;
+    let patchSize = this.fontSize * (3/4);
 
     // Rectangle 
     let h = labels.length * lineHeight;
@@ -95,7 +95,7 @@ function drawLegend(labels, settings){
         // draw text
         x1 += (patchSize + padding);
         y1 += lineHeight;
-        this.drawLabel({text: label.text, x: x1, y: y1, font: `300 ${this.fontSizeScalar*20}px Lato`, textBaseline: "bottom"});
+        this.drawLabel({text: label.text, x: x1, y: y1, font: `300 ${this.fontSize}px Lato`, textBaseline: "bottom"});
     }
 }
 
@@ -115,18 +115,18 @@ function drawLegendAxesLabelsAndTitle(settings){
 
     // draw title
     let titleX = this.canvas.width/2;
-    let titleY = 60*this.fontSizeScalar;
-    this.drawLabel({text: title, x: titleX, y: titleY, font: `300 ${this.fontSizeScalar*60}px Lato`, textAlign: "center"});
+    let titleY = this.fontSize * 2.5;
+    this.drawLabel({text: title, x: titleX, y: titleY, font: `300 ${this.fontSize*2}px Lato`, textAlign: "center"});
 
     // draw x-axis label
     let xLabelX = this.canvas.width/2;
-    let xLabelY = this.canvas.height-(8*this.fontSizeScalar);
-    this.drawLabel({text: xLabel, x: xLabelX, y: xLabelY, font: `500 ${this.fontSizeScalar*27}px Lato`, textAlign: "center"});
+    let xLabelY = this.canvas.height - (this.fontSize);
+    this.drawLabel({text: xLabel, x: xLabelX, y: xLabelY, font: `300 ${this.fontSize*2}px Lato`, textAlign: "center"});
 
     // draw y-axis label
-    let yLabelX = 30*this.fontSizeScalar;
+    let yLabelX = this.fontSize*2;
     let yLabelY = this.canvas.height/2;
-    this.drawLabel({text: yLabel, x: yLabelX, y: yLabelY, theta: Math.PI/2, font: `500 ${this.fontSizeScalar*27}px Lato`, textAlign: "center"});
+    this.drawLabel({text: yLabel, x: yLabelX, y: yLabelY, theta: Math.PI/2, font: `300 ${this.fontSize*2}px Lato`, textAlign: "center"});
 }
 
 
@@ -222,14 +222,14 @@ function linePlot(data, settings){
     let colors = defaultVal(settings.colors, defaultColors);
     let lineWidth = defaultVal(settings.lineWidth, 2);
     let tooltips = defaultVal(settings.tooltips, []);
-    let xTicks = defaultVal(settings.xTicks, parseInt(10*this.fontSizeScalar));
-    let yTicks = defaultVal(settings.yTicks, parseInt(5*this.fontSizeScalar));
+    let xTicks = defaultVal(settings.xTicks, parseInt(this.canvas.width /120));
+    let yTicks = defaultVal(settings.yTicks, parseInt(this.canvas.height /80));
     let xAxisIsTime = defaultVal(settings.xAxisIsTime, false);
     let yAxisIsTime = defaultVal(settings.yAxisIsTime, false);
     
     let zipped = zip(inputs,outputs);
     
-    // find extend of data.
+    // find extent of data.
     let xmin = ymin = Infinity;
     let xmax = ymax = -Infinity;
     for(let [i,[x,y]] of zipped.entries()){
@@ -262,7 +262,9 @@ function linePlot(data, settings){
 
     // use axes information sent to linePlot and not the default
     // axes of easyCanvas.
-    this.setAttribute("default-axes-on","false");
+    if(this.defaultAxesOn){
+        this.setAttribute("default-axes-on","false");
+    }
     this.drawDefaultAxes({
         xTicks: xTicks,
         yTicks: yTicks,
@@ -313,7 +315,7 @@ function barPlot(data, settings){
     }
 
     // y-axis
-    let labelXOffset = this.scaleXInverse(-15*this.fontSizeScalar) - this.scaleXInverse(0)
+    let labelXOffset = this.scaleXInverse(-this.fontSize) - this.scaleXInverse(0)
     this.drawAxis({x1: 0,
                     y1: 0,
                     x2: 0,
@@ -328,7 +330,7 @@ function barPlot(data, settings){
 
 
     // x-axis
-    labelYOffset = this.scaleYInverse(30*this.fontSizeScalar) - this.scaleYInverse(0)
+    labelYOffset = this.scaleYInverse(this.fontSize*1.5) - this.scaleYInverse(0)
 
     this.drawAxis({x1: 0,
                     y1: 0,
@@ -356,8 +358,12 @@ function barPlot(data, settings){
     this.ctx.lineWidth=1;
     this.ctx.fillStyle = "black";
     
-    this.setAttribute("default-axes-on","false");
-    this.setAttribute("controls","false");
+    if(this.defaultAxesOn){
+        this.setAttribute("default-axes-on","false");
+    }
+    if(this.controls){
+        this.setAttribute("controls","false");
+    }
     drawLegendAxesLabelsAndTitle.bind(this)(settings);
 }
 

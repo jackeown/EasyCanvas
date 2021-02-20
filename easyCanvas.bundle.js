@@ -52,7 +52,20 @@ function getScalesFromPoints(oldPoints, newPoints){
 }
 
 class EasyCanvas extends HTMLElement {
-    static get observedAttributes(){ return ["xmin", "xmax", "ymin", "ymax", "framerate", "paddingX", "paddingY", "default-axes-on", "controls"];}
+    static get observedAttributes(){ 
+        return [
+            "xmin",
+            "xmax",
+            "ymin",
+            "ymax",
+            "framerate",
+            "paddingX",
+            "paddingY",
+            "default-axes-on",
+            "controls",
+            "fontsize"
+        ];
+    }
     
     constructor() {
         // Always call super first in constructor
@@ -238,7 +251,7 @@ class EasyCanvas extends HTMLElement {
         
         this.defaultAxesOn = true;
         this.mouseDown = false; // left mouse button is not clicked in when the webpage loads...
-        
+        this.fontsize = 12;
         this.updateScales();
 
         // bind all methods from easyCanvasHotAndReady
@@ -273,7 +286,7 @@ class EasyCanvas extends HTMLElement {
             console.log(`custom element attribute "${name}" has changed from "${oldValue}" to "${newValue}"`);
         
         // simple numeric
-        if(["xmin", "xmax", "ymin", "ymax", "paddingX", "paddingY", "framerate"].includes(name)){
+        if(["xmin", "xmax", "ymin", "ymax", "paddingX", "paddingY", "framerate", "fontsize"].includes(name)){
             this[name] = +newValue;
             this.updateScales();
         }
@@ -326,7 +339,7 @@ class EasyCanvas extends HTMLElement {
             this.DPIHasBeenSet = true;
         }
 
-        this.fontSizeScalar = (this.canvas.width+this.canvas.height) / 1500;
+        this.fontSizeScalar = ((this.canvas.width+this.canvas.height) / (30000) * this.fontsize);
 
         this.renderPlot();
     }
@@ -814,8 +827,8 @@ function linePlot(data, settings){
     let colors = defaultVal(settings.colors, defaultColors);
     let lineWidth = defaultVal(settings.lineWidth, 2);
     let tooltips = defaultVal(settings.tooltips, []);
-    let xTicks = defaultVal(settings.xTicks, parseInt(10*this.fontSizeScalar));
-    let yTicks = defaultVal(settings.yTicks, parseInt(5*this.fontSizeScalar));
+    let xTicks = defaultVal(settings.xTicks, parseInt(this.canvas.width /120/this.fontSizeScalar));
+    let yTicks = defaultVal(settings.yTicks, parseInt(this.canvas.height /80/this.fontSizeScalar));
     let xAxisIsTime = defaultVal(settings.xAxisIsTime, false);
     let yAxisIsTime = defaultVal(settings.yAxisIsTime, false);
     
@@ -854,7 +867,9 @@ function linePlot(data, settings){
 
     // use axes information sent to linePlot and not the default
     // axes of easyCanvas.
-    this.setAttribute("default-axes-on","false");
+    if(this.defaultAxesOn){
+        this.setAttribute("default-axes-on","false");
+    }
     this.drawDefaultAxes({
         xTicks: xTicks,
         yTicks: yTicks,
@@ -948,8 +963,12 @@ function barPlot(data, settings){
     this.ctx.lineWidth=1;
     this.ctx.fillStyle = "black";
     
-    this.setAttribute("default-axes-on","false");
-    this.setAttribute("controls","false");
+    if(this.defaultAxesOn){
+        this.setAttribute("default-axes-on","false");
+    }
+    if(this.controls){
+        this.setAttribute("controls","false");
+    }
     drawLegendAxesLabelsAndTitle.bind(this)(settings);
 }
 

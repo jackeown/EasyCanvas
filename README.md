@@ -6,7 +6,7 @@ We have scales to make plotting your own data easy.
 
 We have "Hot and Ready" line plot, bar plot, etc. in `easyCanvasHotAndReady.js`
 
-Look <a href="https://jackeown.github.io/2019/06/01/easyCanvas.html">here</a> or <a href="https://jackeown.github.io/EasyCanvas">here</a>for some examples and more information.
+Look <a href="https://jackeown.github.io/2019/06/01/easyCanvas.html">here</a> or <a href="https://jackeown.github.io/EasyCanvas">here</a> for some examples and more information.
 
 
 In order to allow for javascript importing between multiple files, we use "browserify"

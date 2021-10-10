@@ -14,10 +14,6 @@ function linearScale(d1, d2, r1, r2){
 }
 window.linearScale = linearScale;
 
-function loggy(message){
-    document.getElementById("logs").innerHTML = message;
-}
-
 // For mobile zooming / panning
 function getScalesFromPoints(oldPoints, newPoints){
     let distOld = dist(...oldPoints);
@@ -58,8 +54,8 @@ class EasyCanvas extends HTMLElement {
             "ymin",
             "ymax",
             "framerate",
-            "paddingX",
-            "paddingY",
+            "xpadding",
+            "ypadding",
             "default-axes-on",
             "controls",
             "fontsize"
@@ -82,8 +78,8 @@ class EasyCanvas extends HTMLElement {
         // update mouseX and mouseY locations
         this.canvas.addEventListener("mousemove",function(e){
             // get size of padding in data units.
-            let padXPixels = (this.paddingX/100)*this.canvas.width;
-            let padYPixels = (this.paddingY/100)*this.canvas.height;
+            let padXPixels = (this.xpadding/100)*this.canvas.width;
+            let padYPixels = (this.ypadding/100)*this.canvas.height;
 
             // data coordinates of actual canvas boundary.
             let px = Math.abs(this.scaleXInverse(padXPixels) - this.scaleXInverse(0));
@@ -159,16 +155,11 @@ class EasyCanvas extends HTMLElement {
             this.renderPlot();
         }.bind(this)
 
-
-
         // panning controls
         this.canvas.addEventListener("mousemove", this.panningControl);
 
         // zooming controls
         this.canvas.addEventListener("wheel", this.zoomingControl);
-
-
-
 
         // touch events:
         this.canvas.addEventListener("touchstart", function(e){
@@ -238,8 +229,8 @@ class EasyCanvas extends HTMLElement {
         
         // config
         this.framerate = 30;
-        this.paddingX = 10;
-        this.paddingY = 16;
+        this.xpadding = 10;
+        this.ypadding = 16;
 
         this.xmin = -100;
         this.xmax = 100;        
@@ -247,10 +238,11 @@ class EasyCanvas extends HTMLElement {
         this.ymax = 100;
 
         this.dpr = 2; // device pixel ratio.
+        this.debug = true; 
         
         this.defaultAxesOn = true;
         this.mouseDown = false; // left mouse button is not clicked in when the webpage loads...
-        this.fontSize = 25;
+        this.fontsize = 25;
         this.updateScales();
 
         // bind all methods from easyCanvasHotAndReady
@@ -285,7 +277,7 @@ class EasyCanvas extends HTMLElement {
             console.log(`custom element attribute "${name}" has changed from "${oldValue}" to "${newValue}"`);
         
         // simple numeric
-        if(["xmin", "xmax", "ymin", "ymax", "paddingX", "paddingY", "framerate", "fontsize"].includes(name)){
+        if(["xmin", "xmax", "ymin", "ymax", "xpadding", "ypadding", "framerate", "fontsize"].includes(name)){
             this[name] = +newValue;
             this.updateScales();
         }
@@ -309,8 +301,8 @@ class EasyCanvas extends HTMLElement {
     updateScales(){
         let w = this.canvas.width;
         let h = this.canvas.height;
-        let padXPixels = (this.paddingX/100)*w;
-        let padYPixels = (this.paddingY/100)*h;
+        let padXPixels = (this.xpadding/100)*w;
+        let padYPixels = (this.ypadding/100)*h;
 
         // map the range of the data to the range of the canvas where data should appear.
         this.scaleX = linearScale(this.xmin, this.xmax, padXPixels, w - padXPixels);
@@ -357,6 +349,9 @@ class EasyCanvas extends HTMLElement {
             if(ready){
                 this.renderPlot();
             }
+        }
+        catch(e){
+            console.error(e);
         }
         finally {
             requestAnimationFrame(this.renderPlotLoop.bind(this));
@@ -453,7 +448,7 @@ class EasyCanvas extends HTMLElement {
                 y: labelY, 
                 theta: labelTheta, 
                 textAlign: "center",
-                font: `${this.fontSize}px Lato`
+                font: `${this.fontsize}px Lato`
             };
             if(labels){
                 labelSettings.text = labels[i-1];
@@ -486,10 +481,10 @@ class EasyCanvas extends HTMLElement {
         let [xAxisIsTime,yAxisIsTime] = defaultVals(settings,["xAxisIsTime","yAxisIsTime"],[false,false]);
 
         // x-axis
-        let labelYOffset = this.scaleYInverse(this.fontSize + 10)-this.scaleYInverse(0);
+        let labelYOffset = this.scaleYInverse(this.fontsize + 10)-this.scaleYInverse(0);
         this.drawAxis({
             x1:this.xmin,
-            y1: this.ymin,
+            y1:this.ymin,
             x2:this.xmax,
             y2:this.ymin, 
             labelXOffset:0,
@@ -503,7 +498,7 @@ class EasyCanvas extends HTMLElement {
         })
     
         // y-axis
-        let labelXOffset = this.scaleXInverse(-(this.fontSize + 10))-this.scaleXInverse(0);
+        let labelXOffset = this.scaleXInverse(-(this.fontsize + 10))-this.scaleXInverse(0);
         this.drawAxis({
             x1:this.xmin,
             y1: this.ymin,

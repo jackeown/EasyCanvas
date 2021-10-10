@@ -15,10 +15,6 @@ function linearScale(d1, d2, r1, r2){
 }
 window.linearScale = linearScale;
 
-function loggy(message){
-    document.getElementById("logs").innerHTML = message;
-}
-
 // For mobile zooming / panning
 function getScalesFromPoints(oldPoints, newPoints){
     let distOld = dist(...oldPoints);
@@ -59,8 +55,8 @@ class EasyCanvas extends HTMLElement {
             "ymin",
             "ymax",
             "framerate",
-            "paddingX",
-            "paddingY",
+            "xpadding",
+            "ypadding",
             "default-axes-on",
             "controls",
             "fontsize"
@@ -83,8 +79,8 @@ class EasyCanvas extends HTMLElement {
         // update mouseX and mouseY locations
         this.canvas.addEventListener("mousemove",function(e){
             // get size of padding in data units.
-            let padXPixels = (this.paddingX/100)*this.canvas.width;
-            let padYPixels = (this.paddingY/100)*this.canvas.height;
+            let padXPixels = (this.xpadding/100)*this.canvas.width;
+            let padYPixels = (this.ypadding/100)*this.canvas.height;
 
             // data coordinates of actual canvas boundary.
             let px = Math.abs(this.scaleXInverse(padXPixels) - this.scaleXInverse(0));
@@ -160,16 +156,11 @@ class EasyCanvas extends HTMLElement {
             this.renderPlot();
         }.bind(this)
 
-
-
         // panning controls
         this.canvas.addEventListener("mousemove", this.panningControl);
 
         // zooming controls
         this.canvas.addEventListener("wheel", this.zoomingControl);
-
-
-
 
         // touch events:
         this.canvas.addEventListener("touchstart", function(e){
@@ -239,8 +230,8 @@ class EasyCanvas extends HTMLElement {
         
         // config
         this.framerate = 30;
-        this.paddingX = 10;
-        this.paddingY = 16;
+        this.xpadding = 10;
+        this.ypadding = 16;
 
         this.xmin = -100;
         this.xmax = 100;        
@@ -248,10 +239,11 @@ class EasyCanvas extends HTMLElement {
         this.ymax = 100;
 
         this.dpr = 2; // device pixel ratio.
+        this.debug = true; 
         
         this.defaultAxesOn = true;
         this.mouseDown = false; // left mouse button is not clicked in when the webpage loads...
-        this.fontSize = 25;
+        this.fontsize = 25;
         this.updateScales();
 
         // bind all methods from easyCanvasHotAndReady
@@ -286,7 +278,7 @@ class EasyCanvas extends HTMLElement {
             console.log(`custom element attribute "${name}" has changed from "${oldValue}" to "${newValue}"`);
         
         // simple numeric
-        if(["xmin", "xmax", "ymin", "ymax", "paddingX", "paddingY", "framerate", "fontsize"].includes(name)){
+        if(["xmin", "xmax", "ymin", "ymax", "xpadding", "ypadding", "framerate", "fontsize"].includes(name)){
             this[name] = +newValue;
             this.updateScales();
         }
@@ -310,8 +302,8 @@ class EasyCanvas extends HTMLElement {
     updateScales(){
         let w = this.canvas.width;
         let h = this.canvas.height;
-        let padXPixels = (this.paddingX/100)*w;
-        let padYPixels = (this.paddingY/100)*h;
+        let padXPixels = (this.xpadding/100)*w;
+        let padYPixels = (this.ypadding/100)*h;
 
         // map the range of the data to the range of the canvas where data should appear.
         this.scaleX = linearScale(this.xmin, this.xmax, padXPixels, w - padXPixels);
@@ -358,6 +350,9 @@ class EasyCanvas extends HTMLElement {
             if(ready){
                 this.renderPlot();
             }
+        }
+        catch(e){
+            console.error(e);
         }
         finally {
             requestAnimationFrame(this.renderPlotLoop.bind(this));
@@ -454,7 +449,7 @@ class EasyCanvas extends HTMLElement {
                 y: labelY, 
                 theta: labelTheta, 
                 textAlign: "center",
-                font: `${this.fontSize}px Lato`
+                font: `${this.fontsize}px Lato`
             };
             if(labels){
                 labelSettings.text = labels[i-1];
@@ -487,10 +482,10 @@ class EasyCanvas extends HTMLElement {
         let [xAxisIsTime,yAxisIsTime] = defaultVals(settings,["xAxisIsTime","yAxisIsTime"],[false,false]);
 
         // x-axis
-        let labelYOffset = this.scaleYInverse(this.fontSize + 10)-this.scaleYInverse(0);
+        let labelYOffset = this.scaleYInverse(this.fontsize + 10)-this.scaleYInverse(0);
         this.drawAxis({
             x1:this.xmin,
-            y1: this.ymin,
+            y1:this.ymin,
             x2:this.xmax,
             y2:this.ymin, 
             labelXOffset:0,
@@ -504,7 +499,7 @@ class EasyCanvas extends HTMLElement {
         })
     
         // y-axis
-        let labelXOffset = this.scaleXInverse(-(this.fontSize + 10))-this.scaleXInverse(0);
+        let labelXOffset = this.scaleXInverse(-(this.fontsize + 10))-this.scaleXInverse(0);
         this.drawAxis({
             x1:this.xmin,
             y1: this.ymin,
@@ -612,8 +607,8 @@ let {defaultColors, zip, defaultVal, defaultVals, dist, getTimeLabel} = helpers;
 // tools
 function drawTooltip(x,y,info){
     let padding = 10;
-    let lineHeight = this.fontSize;
-    let letterWidth = this.fontSize / 2;
+    let lineHeight = this.fontsize;
+    let letterWidth = this.fontsize / 2;
 
     let keys = Object.keys(info);
     let values = Object.values(info);
@@ -652,21 +647,22 @@ function drawTooltip(x,y,info){
         let labelSettings = {x: x1, y: y1, textBaseline: "bottom"}
 
         labelSettings.text = label[0];
-        labelSettings.font = `bold ${this.fontSize}px Lato`;
+        labelSettings.font = `bold ${this.fontsize}px Lato`;
         this.drawLabel(labelSettings);
         
         labelSettings.x += (letterWidth*label[0].length);
         labelSettings.text = label[1];
-        labelSettings.font = `${this.fontSize}px Lato`;
+        labelSettings.font = `${this.fontsize}px Lato`;
         this.drawLabel(labelSettings);
     }
 }
 
 function drawLegend(labels, settings){
-    let padding = this.fontSize / 2;
-    let lineHeight = this.fontSize;
-    let letterWidth = this.fontSize / 2;
-    let patchSize = this.fontSize * (3/4);
+    
+    let padding = this.fontsize / 2;
+    let lineHeight = this.fontsize;
+    let letterWidth = this.fontsize / 2;
+    let patchSize = this.fontsize * (3/4);
 
     // Rectangle 
     let h = labels.length * lineHeight;
@@ -682,7 +678,8 @@ function drawLegend(labels, settings){
     this.ctx.stroke();
     this.ctx.fill();
     this.ctx.fillStyle="black";
-
+    
+    
     // Individual labels
     for(let [i, label] of labels.entries()){
         // draw patch
@@ -698,7 +695,7 @@ function drawLegend(labels, settings){
         // draw text
         x1 += (patchSize + padding);
         y1 += lineHeight;
-        this.drawLabel({text: label.text, x: x1, y: y1, font: `300 ${this.fontSize}px Lato`, textBaseline: "bottom"});
+        this.drawLabel({text: label.text, x: x1, y: y1, font: `300 ${this.fontsize}px Lato`, textBaseline: "bottom"});
     }
 }
 
@@ -718,18 +715,18 @@ function drawLegendAxesLabelsAndTitle(settings){
 
     // draw title
     let titleX = this.canvas.width/2;
-    let titleY = this.fontSize * 2.5;
-    this.drawLabel({text: title, x: titleX, y: titleY, font: `300 ${this.fontSize*2}px Lato`, textAlign: "center"});
+    let titleY = this.fontsize * 2.5;
+    this.drawLabel({text: title, x: titleX, y: titleY, font: `300 ${this.fontsize*2}px Lato`, textAlign: "center"});
 
     // draw x-axis label
     let xLabelX = this.canvas.width/2;
-    let xLabelY = this.canvas.height - (this.fontSize);
-    this.drawLabel({text: xLabel, x: xLabelX, y: xLabelY, font: `300 ${this.fontSize*2}px Lato`, textAlign: "center"});
+    let xLabelY = this.canvas.height - (this.fontsize);
+    this.drawLabel({text: xLabel, x: xLabelX, y: xLabelY, font: `300 ${this.fontsize*2}px Lato`, textAlign: "center"});
 
     // draw y-axis label
-    let yLabelX = this.fontSize*2;
+    let yLabelX = this.fontsize*2;
     let yLabelY = this.canvas.height/2;
-    this.drawLabel({text: yLabel, x: yLabelX, y: yLabelY, theta: Math.PI/2, font: `300 ${this.fontSize*2}px Lato`, textAlign: "center"});
+    this.drawLabel({text: yLabel, x: yLabelX, y: yLabelY, theta: Math.PI/2, font: `300 ${this.fontsize*2}px Lato`, textAlign: "center"});
 }
 
 
@@ -832,7 +829,7 @@ function linePlot(data, settings){
     
     let zipped = zip(inputs,outputs);
     
-    // find extend of data.
+    // find extent of data.
     let xmin = ymin = Infinity;
     let xmax = ymax = -Infinity;
     for(let [i,[x,y]] of zipped.entries()){
@@ -918,7 +915,7 @@ function barPlot(data, settings){
     }
 
     // y-axis
-    let labelXOffset = this.scaleXInverse(-this.fontSize) - this.scaleXInverse(0)
+    let labelXOffset = this.scaleXInverse(-this.fontsize) - this.scaleXInverse(0)
     this.drawAxis({x1: 0,
                     y1: 0,
                     x2: 0,
@@ -933,7 +930,7 @@ function barPlot(data, settings){
 
 
     // x-axis
-    labelYOffset = this.scaleYInverse(this.fontSize*1.5) - this.scaleYInverse(0)
+    labelYOffset = this.scaleYInverse(this.fontsize*1.5) - this.scaleYInverse(0)
 
     this.drawAxis({x1: 0,
                     y1: 0,
@@ -1017,7 +1014,6 @@ function dist(x1,y1,x2,y2){
     return Math.sqrt(Math.pow(x2-x1,2) + Math.pow(y2-y1,2));
 }
 
-
 function getTimeLabel(i, nTicks, scaleStart, scaleEnd){
     let start = new Date(scaleStart);
     let now = new Date(scaleStart + (scaleEnd-scaleStart)*(i/nTicks));
@@ -1069,6 +1065,7 @@ function getTimeLabel(i, nTicks, scaleStart, scaleEnd){
 
     return label;
 }
+
 
 
 

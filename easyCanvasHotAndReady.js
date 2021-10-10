@@ -9,8 +9,8 @@ let {defaultColors, zip, defaultVal, defaultVals, dist, getTimeLabel} = helpers;
 // tools
 function drawTooltip(x,y,info){
     let padding = 10;
-    let lineHeight = this.fontSize;
-    let letterWidth = this.fontSize / 2;
+    let lineHeight = this.fontsize;
+    let letterWidth = this.fontsize / 2;
 
     let keys = Object.keys(info);
     let values = Object.values(info);
@@ -49,21 +49,22 @@ function drawTooltip(x,y,info){
         let labelSettings = {x: x1, y: y1, textBaseline: "bottom"}
 
         labelSettings.text = label[0];
-        labelSettings.font = `bold ${this.fontSize}px Lato`;
+        labelSettings.font = `bold ${this.fontsize}px Lato`;
         this.drawLabel(labelSettings);
         
         labelSettings.x += (letterWidth*label[0].length);
         labelSettings.text = label[1];
-        labelSettings.font = `${this.fontSize}px Lato`;
+        labelSettings.font = `${this.fontsize}px Lato`;
         this.drawLabel(labelSettings);
     }
 }
 
 function drawLegend(labels, settings){
-    let padding = this.fontSize / 2;
-    let lineHeight = this.fontSize;
-    let letterWidth = this.fontSize / 2;
-    let patchSize = this.fontSize * (3/4);
+    
+    let padding = this.fontsize / 2;
+    let lineHeight = this.fontsize;
+    let letterWidth = this.fontsize / 2;
+    let patchSize = this.fontsize * (3/4);
 
     // Rectangle 
     let h = labels.length * lineHeight;
@@ -79,7 +80,8 @@ function drawLegend(labels, settings){
     this.ctx.stroke();
     this.ctx.fill();
     this.ctx.fillStyle="black";
-
+    
+    
     // Individual labels
     for(let [i, label] of labels.entries()){
         // draw patch
@@ -95,7 +97,7 @@ function drawLegend(labels, settings){
         // draw text
         x1 += (patchSize + padding);
         y1 += lineHeight;
-        this.drawLabel({text: label.text, x: x1, y: y1, font: `300 ${this.fontSize}px Lato`, textBaseline: "bottom"});
+        this.drawLabel({text: label.text, x: x1, y: y1, font: `300 ${this.fontsize}px Lato`, textBaseline: "bottom"});
     }
 }
 
@@ -115,18 +117,18 @@ function drawLegendAxesLabelsAndTitle(settings){
 
     // draw title
     let titleX = this.canvas.width/2;
-    let titleY = this.fontSize * 2.5;
-    this.drawLabel({text: title, x: titleX, y: titleY, font: `300 ${this.fontSize*2}px Lato`, textAlign: "center"});
+    let titleY = this.fontsize * 2.5;
+    this.drawLabel({text: title, x: titleX, y: titleY, font: `300 ${this.fontsize*2}px Lato`, textAlign: "center"});
 
     // draw x-axis label
     let xLabelX = this.canvas.width/2;
-    let xLabelY = this.canvas.height - (this.fontSize);
-    this.drawLabel({text: xLabel, x: xLabelX, y: xLabelY, font: `300 ${this.fontSize*2}px Lato`, textAlign: "center"});
+    let xLabelY = this.canvas.height - (this.fontsize);
+    this.drawLabel({text: xLabel, x: xLabelX, y: xLabelY, font: `300 ${this.fontsize*2}px Lato`, textAlign: "center"});
 
     // draw y-axis label
-    let yLabelX = this.fontSize*2;
+    let yLabelX = this.fontsize*2;
     let yLabelY = this.canvas.height/2;
-    this.drawLabel({text: yLabel, x: yLabelX, y: yLabelY, theta: Math.PI/2, font: `300 ${this.fontSize*2}px Lato`, textAlign: "center"});
+    this.drawLabel({text: yLabel, x: yLabelX, y: yLabelY, theta: Math.PI/2, font: `300 ${this.fontsize*2}px Lato`, textAlign: "center"});
 }
 
 
@@ -315,7 +317,7 @@ function barPlot(data, settings){
     }
 
     // y-axis
-    let labelXOffset = this.scaleXInverse(-this.fontSize) - this.scaleXInverse(0)
+    let labelXOffset = this.scaleXInverse(-this.fontsize) - this.scaleXInverse(0)
     this.drawAxis({x1: 0,
                     y1: 0,
                     x2: 0,
@@ -330,7 +332,7 @@ function barPlot(data, settings){
 
 
     // x-axis
-    labelYOffset = this.scaleYInverse(this.fontSize*1.5) - this.scaleYInverse(0)
+    labelYOffset = this.scaleYInverse(this.fontsize*1.5) - this.scaleYInverse(0)
 
     this.drawAxis({x1: 0,
                     y1: 0,

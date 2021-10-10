@@ -1,0 +1,11 @@
+{
+    "compilerOptions": {
+        "module": "ES6",
+        "target": "ESNext",
+        // "watch": true,
+        "lib": ["DOM", "ES2017"],
+        "alwaysStrict": false,
+        "noImplicitAny": false,
+        "noImplicitUseStrict": true,
+    }
+}

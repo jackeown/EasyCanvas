@@ -1,10 +1,9 @@
 /* this file contains functions for making very common plots using easyCanvas */
 /* they will be made accessable via EasyCanvas.hotAndReady */
 
-// helpers:
 import {defaultColors, zip, defaultVal, defaultVals, dist, getTimeLabel} from "./helpers";
-// const helpers = require('./helpers.js')
-// let {defaultColors, zip, defaultVal, defaultVals, dist, getTimeLabel} = helpers;
+import {Point, LabelSettings} from "./interfaces";
+import {EasyCanvas} from "./easyCanvas";
 
 
 // tools

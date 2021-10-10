@@ -3,11 +3,7 @@ import * as hotAndReadyFuncs from "./easyCanvasHotAndReady";
 import * as helpers from "./helpers";
 import {defaultColors, zip, defaultVal, defaultVals, dist, getTimeLabel} from "./helpers";
 
-
-interface Point {
-    x: number,
-    y: number
-}
+import {Point, LabelSettings} from "./interfaces";
 
 // d for domain, r for range...actually affine.
 function linearScale(d1, d2, r1, r2){
@@ -424,8 +420,9 @@ class EasyCanvas extends HTMLElement {
         }
     }
 
+    
 
-    drawLabel(settings){
+    drawLabel(settings: LabelSettings){
         settings["theta"] = defaultVal(settings["theta"], 0);
         settings["font"] = defaultVal(settings["font"], "20px Lato");
         settings["textAlign"] = defaultVal(settings["textAlign"], "left");
@@ -622,3 +619,6 @@ link.setAttribute('rel', 'stylesheet');
 link.setAttribute('type', 'text/css');
 link.setAttribute('href', 'https://fonts.googleapis.com/css?family=Lato:100,200,300,400,500,600');
 document.head.appendChild(link);
+
+
+export {EasyCanvas}

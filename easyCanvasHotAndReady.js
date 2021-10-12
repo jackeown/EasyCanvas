@@ -3,6 +3,8 @@
 
 // helpers:
 const helpers = require('./helpers.js')
+const msk = require('./hotAndReadyMasks.js')
+let {tsifyMask, computeMask, drawMask} = msk;
 let {defaultColors, zip, defaultVal, defaultVals, dist, getTimeLabel} = helpers;
 
 
@@ -218,6 +220,7 @@ function getLinePlotTooltip(data, inputs, outputs, tooltips, epsilon=100){
 function linePlot(data, settings){
     let inputs = defaultVal(settings.inputs, ["xs"]);
     let outputs = defaultVal(settings.outputs, ["ys"]);
+    let masks = defaultVal(settings.masks, []);
     let autoScale = defaultVal(settings.autoScale, true);
     let colors = defaultVal(settings.colors, defaultColors);
     let lineWidth = defaultVal(settings.lineWidth, 2);
@@ -226,7 +229,7 @@ function linePlot(data, settings){
     let yTicks = defaultVal(settings.yTicks, parseInt(this.canvas.height /80));
     let xAxisIsTime = defaultVal(settings.xAxisIsTime, false);
     let yAxisIsTime = defaultVal(settings.yAxisIsTime, false);
-    
+
     let zipped = zip(inputs,outputs);
     
     // find extent of data.
@@ -301,6 +304,28 @@ function linePlot(data, settings){
         this.canvas.addEventListener("mousemove", this.hotAndReadyEventListeners["linePlot"]["mousemove"])
     }
 
+    if(xAxisIsTime){
+        // this is not ideal because we assume the first input is the time axis that should always be used
+        for (const [index, mask] of masks.entries()){
+            let newMask1 = computeMask.bind(this)(data[mask])
+            let newMask = tsifyMask.bind(this)(newMask1, data[inputs[0]])
+            let height = (this.ymax-this.ymin) / masks.length
+            let top = this.ymax-(index*height)
+            let bottom = top-(height/5)
+            let color;
+            if(mask.includes('low')){
+                    color = 'rgba(0,0,255,.2)';
+            }
+            else if(mask.includes('high')){
+                    color = 'rgba(255,0,0,.2)';
+            }
+            else{
+                color = 'rgba(200,200,200,.2)';
+            }
+
+            drawMask.bind(this)(newMask,color, top, bottom,)
+        }
+    }
 }
 
 

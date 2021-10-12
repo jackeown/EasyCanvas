@@ -606,6 +606,8 @@ document.head.appendChild(link);
 
 // helpers:
 const helpers = require('./helpers.js')
+const msk = require('./hotAndReadyMasks.js')
+let {tsifyMask, computeMask, drawMask} = msk;
 let {defaultColors, zip, defaultVal, defaultVals, dist, getTimeLabel} = helpers;
 
 
@@ -821,6 +823,7 @@ function getLinePlotTooltip(data, inputs, outputs, tooltips, epsilon=100){
 function linePlot(data, settings){
     let inputs = defaultVal(settings.inputs, ["xs"]);
     let outputs = defaultVal(settings.outputs, ["ys"]);
+    let masks = defaultVal(settings.masks, []);
     let autoScale = defaultVal(settings.autoScale, true);
     let colors = defaultVal(settings.colors, defaultColors);
     let lineWidth = defaultVal(settings.lineWidth, 2);
@@ -829,10 +832,10 @@ function linePlot(data, settings){
     let yTicks = defaultVal(settings.yTicks, parseInt(this.canvas.height /80));
     let xAxisIsTime = defaultVal(settings.xAxisIsTime, false);
     let yAxisIsTime = defaultVal(settings.yAxisIsTime, false);
-    
+
     let zipped = zip(inputs,outputs);
     
-    // find extend of data.
+    // find extent of data.
     let xmin = ymin = Infinity;
     let xmax = ymax = -Infinity;
     for(let [i,[x,y]] of zipped.entries()){
@@ -904,6 +907,28 @@ function linePlot(data, settings){
         this.canvas.addEventListener("mousemove", this.hotAndReadyEventListeners["linePlot"]["mousemove"])
     }
 
+    if(xAxisIsTime){
+        // this is not ideal because we assume the first input is the time axis that should always be used
+        for (const [index, mask] of masks.entries()){
+            let newMask1 = computeMask.bind(this)(data[mask])
+            let newMask = tsifyMask.bind(this)(newMask1, data[inputs[0]])
+            let height = (this.ymax-this.ymin) / masks.length
+            let top = this.ymax-(index*height)
+            let bottom = top-(height/5)
+            let color;
+            if(mask.includes('low')){
+                    color = 'rgba(0,0,255,.2)';
+            }
+            else if(mask.includes('high')){
+                    color = 'rgba(255,0,0,.2)';
+            }
+            else{
+                color = 'rgba(200,200,200,.2)';
+            }
+
+            drawMask.bind(this)(newMask,color, top, bottom,)
+        }
+    }
 }
 
 
@@ -989,7 +1014,7 @@ module.exports = {
 //     ["barPlot", barPlot],
 //     ["histogram", barPlot]
 // ]; 
-},{"./helpers.js":3}],3:[function(require,module,exports){
+},{"./helpers.js":3,"./hotAndReadyMasks.js":4}],3:[function(require,module,exports){
 let defaultColors = ["red", "green","orange", "blue", "purple", "yellow"];
 
 function zip(xs,ys){
@@ -1084,4 +1109,62 @@ module.exports = {
 
 
 
+},{}],4:[function(require,module,exports){
+function computeMask(boolSeries){
+    //boolSeries is a bit of a misnomer- there can be NaNs, zeros, and non-zeros.
+    RegionList=[]
+    currentRegionStart=0
+    currentRegionOn=isOn(boolSeries[0])
+    for(i=1; i<boolSeries.length; i++){
+        if (currentRegionOn!==isOn(boolSeries[i])){
+            if (currentRegionOn===true){
+                RegionList.push({'start':currentRegionStart, 'end':i});
+            }
+            currentRegionOn=!currentRegionOn;
+            currentRegionStart=i;
+        }
+    }
+    if(currentRegionOn===true && isOn(boolSeries[boolSeries.length-1])){
+        RegionList.push(Object({'start':currentRegionStart, 'end':boolSeries.length-1}))
+    }
+    return RegionList
+}
+
+
+function tsifyMask(RegionList, timestampList){
+    return RegionList.map(elem => {return {"start": timestampList[elem['start']], "end": timestampList[elem['end']]}})
+}
+
+function isOn(number){
+    return !([null, 0].includes(number))
+}
+
+function drawMask(RegionList, fillstyle="rgba(255,0,0,0.2)", filltop=undefined, fillbottom=undefined, text=''){
+    //regions should have a start timestamp, and an end timestamp, and a hover text.
+    if (fillbottom===undefined){
+        fillbottom = this.ymin;
+    }
+    if (filltop===undefined){
+        filltop = this.ymax;
+    }
+    for (let region of RegionList){
+        let t2 = region["end"];
+        let t1 = region["start"];
+        this.ctx.save();
+        this.ctx.font = "30px Arial";
+        this.ctx.fillText(text, this.scaleX(t1), (this.scaleY(filltop)+this.scaleY(fillbottom))/2);
+        this.ctx.fillStyle=fillstyle;
+        this.ctx.beginPath();
+        this.rect(t1,fillbottom,t2-t1,filltop-fillbottom);
+        this.ctx.fill();
+        this.ctx.closePath();
+        this.ctx.restore()
+    }
+}
+
+module.exports = {
+    "computeMask": computeMask,
+    "tsifyMask": tsifyMask,
+    "drawMask": drawMask
+}
 },{}]},{},[1]);

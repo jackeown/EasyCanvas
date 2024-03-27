@@ -115,44 +115,29 @@
 
       <h3>TypeScript:</h3>
       <pre class="example2"><code class="language-typescript">
-            interface PlotData {
-                categories: string[];
-                series1: number[];
-                series2: number[];
-              }
-              
-              interface PlotSettings {
-                title: string;
-                xLabel: string;
-                yLabel: string;
-                barColors: string[];
-                legendLabels: string[];
-              }
-              
-              function range(start: number, end: number, step: number = 1): number[] {
-                return Array.from({ length: (end - start) / step + 1 }, (_, i) => start + i * step);
-              }
-              
-              document.addEventListener("DOMContentLoaded", () => {
-                const data: PlotData = {
-                  categories: ['A', 'B', 'C', 'D', 'E'],
-                  series1: [5, 3, 4, 7, 2],
-                  series2: [3, 2, 5, 6, 4]
-                };
-              
-                const settings: PlotSettings = {
-                  title: "Comparison of Series 1 and Series 2",
-                  xLabel: "Categories",
-                  yLabel: "Values",
-                  barColors: ['#FF0000', '#0000FF'],
-                  legendLabels: ['Series 1', 'Series 2']
-                };
-              
-                const example2 = document.getElementById("example2") as any; // Assuming easy-canvas can be interacted with like this.
-                example2.drawingLoop = function() {
-                  this.hotAndReady.multiBarPlot(data, settings);
-                }.bind(example2);
-              });              
+        import { BarPlotData, BarPlotSettings } from "./interfaces";
+        import { EasyCanvas } from "./easyCanvas";
+        
+        
+        const data2 : BarPlotData = {
+            "bars": ["Ice Cream", "Cake", "Donuts", "Key-lime pie","Kale","Fudge"],
+            "heights": [5,10,30,35,3,50]
+        }
+        
+        const settings2: BarPlotSettings = {
+            title: "Dessert Sales",
+            xLabel: "Flavors",
+            yLabel: "Pounds of Product Sold",
+            legendLabels: data2.bars
+        }
+        
+        // example canvas 2
+        const ec2 : EasyCanvas = document.getElementById("example2") as EasyCanvas;
+        ec2.drawingLoop = function(){
+            this.hotAndReady.barPlot(data2,settings2);
+        }.bind(ec2);
+        
+        export {settings2};         
 
         </code></pre>
 

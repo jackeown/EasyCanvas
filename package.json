@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "ts-loader": "^9.5.1",
+    "tsc": "^2.0.4",
+    "typescript": "^5.4.3",
+    "webpack": "^5.91.0"
+  },
+  "devDependencies": {
+    "webpack-cli": "^5.1.4"
+  }
+}

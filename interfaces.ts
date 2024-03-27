@@ -13,5 +13,19 @@ interface LabelSettings {
     textBaseline?: "top" | "hanging" | "middle" | "alphabetic" | "ideographic" | "bottom";
 }
 
+interface BarPlotData {
+    bars: string[];
+    heights: number[];
+}
 
-export {Point, LabelSettings}
+interface BarPlotSettings {
+    autoScale?: boolean;
+    title: string;
+    xLabel?: string;
+    yLabel?: string;
+    legendLabels?: string[];
+    colors?: string[];
+    barWidth?: number;
+}
+
+export {Point, LabelSettings, BarPlotData, BarPlotSettings};

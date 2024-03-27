@@ -1,186 +1,239 @@
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Easy Canvas Testing</title>
     <style>
-        body {
-            width: 80%;
-            margin: auto;
-            padding: 5em;
-            box-shadow: 0px 0px 20px 0px black;
-            font-family: OpenSans, Roboto;
-        }
+      body {
+        width: 80%;
+        margin: auto;
+        padding: 5em;
+        box-shadow: 0px 0px 20px 0px black;
+        font-family: OpenSans, Roboto;
+      }
 
-        summary > h2 {
-            display: inline-block
-        }
+      summary > h2 {
+        display: inline-block;
+      }
 
-        details:focus, summary:focus{
-            outline:none;
-        }
+      details:focus,
+      summary:focus {
+        outline: none;
+      }
 
-        summary{
-            cursor:pointer;
-            user-select: none;
-        }
+      summary {
+        cursor: pointer;
+        user-select: none;
+      }
 
-        #example1Div {
-            width:500px;
-            height:500px;
-            margin:auto;
-        }
+      #example1Div {
+        width: 500px;
+        height: 500px;
+        margin: auto;
+      }
     </style>
 
     <!-- Syntax Highlighting for code examples -->
-    <link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.2.0/styles/atom-one-dark.min.css">
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/@highlightjs/cdn-assets@11.2.0/styles/atom-one-dark.min.css"
+    />
     <script src="https://unpkg.com/@highlightjs/cdn-assets@11.2.0/highlight.min.js"></script>
     <!-- <script src="https://unpkg.com/@highlightjs/cdn-assets@11.2.0/languages/go.min.js"></script> -->
-</head>
+  </head>
 
-<body>
-    <script src="./easyCanvas.bundle.js"></script>
+  <body>
+    <script src="./dist/easyCanvas.bundle.js"></script>
 
     <h1>Easy Canvas Examples</h1>
-    <hr>
-
+    <hr />
 
     <details open>
-        <summary><h2>Example 1: Simple Line Plot</h2></summary>
-            
-        <h3>HTML:</h3>
-        <pre class="example1"><code class="language-html"></code></pre>
+      <summary><h2>Example 1: Simple Line Plot</h2></summary>
 
-        <h3>JavaScript:</h3>
-        <pre class="example1"><code class="language-javascript"></code></pre>
+      <h3>HTML:</h3>
+      <pre class="example1"><code class="language-html"></code></pre>
 
-        <h3>Rendered Result:</h3>
-        <div id="example1Div">
-            <easy-canvas id="example1" framerate="1.0" xmin="0" xpadding="15" ypadding="10" xmax="6.28" ymin="-1" ymax="1" default-axes-on="false" fontsize="25"></easy-canvas>
-        </div>
-        <script class="example1">
-            function range(a, b, delta = 0.01) {
-                let l = [];
-                for (let i = a; i < b; i += delta) {
-                    l.push(i);
-                }
-                return l;
-            }
+      <h3>JavaScript:</h3>
+      <pre class="example1"><code class="language-javascript"></code></pre>
 
-            const data1 = {
-                xs: range(0, 2 * Math.PI), // arbitrary name
-                sine: range(0, 2 * Math.PI).map(v => Math.sin(v)), // arbitrary name
-                cosine: range(0, 2 * Math.PI).map(v => Math.cos(v)) // arbitrary name
-            }
+      <h3>Rendered Result:</h3>
+      <div id="example1Div">
+        <easy-canvas
+          id="example1"
+          framerate="1.0"
+          xmin="0"
+          xpadding="15"
+          ypadding="10"
+          xmax="6.28"
+          ymin="-1"
+          ymax="1"
+          default-axes-on="false"
+          fontsize="25"
+        ></easy-canvas>
+      </div>
+      <script class="example1">
+        function range(a, b, delta = 0.01) {
+          let l = [];
+          for (let i = a; i < b; i += delta) {
+            l.push(i);
+          }
+          return l;
+        }
 
-            const settings1 = {
-                title: "Sine and Cosine",
-                xLabel: "xs",
-                yLabel: "sine and cosine",
-                inputs: ["xs", "xs"],
-                outputs: ["sine", "cosine"],
-                legendLabels: ["Sine", "Cosine"],
-                tooltips: ["sine", "cosine"]
-            }
+        const data1 = {
+          xs: range(0, 2 * Math.PI), // arbitrary name
+          sine: range(0, 2 * Math.PI).map((v) => Math.sin(v)), // arbitrary name
+          cosine: range(0, 2 * Math.PI).map((v) => Math.cos(v)), // arbitrary name
+        };
 
-            // ec1 because this is the first example canvas
-            const ec1 = document.getElementById("example1");
-            ec1.debug = true;
-            ec1.drawingLoop = function () {
-                this.hotAndReady.linePlot(data1, settings1);
-            }.bind(ec1);
-        </script>
+        const settings1 = {
+          title: "Sine and Cosine",
+          xLabel: "xs",
+          yLabel: "sine and cosine",
+          inputs: ["xs", "xs"],
+          outputs: ["sine", "cosine"],
+          legendLabels: ["Sine", "Cosine"],
+          tooltips: ["sine", "cosine"],
+        };
+
+        // ec1 because this is the first example canvas
+        const ec1 = document.getElementById("example1");
+        ec1.debug = true;
+        ec1.drawingLoop = function () {
+          this.hotAndReady.linePlot(data1, settings1);
+        }.bind(ec1); // when we say "this" inside the drawingLoop, we want it to refer to ec1
+      </script>
     </details>
 
-
-
-
-
-
     <!-- Example 2 -->
-    <details hidden>
-        <summary><h2>Example 2: Electric Boogaloo</h2></summary>
+    <details open>
+      <summary><h2>Example 2: Multi Bar Plot</h2></summary>
 
-        <h3>HTML:</h3>
-        <pre class="example1"><code class="language-html"></code></pre>
+      <h3>HTML:</h3>
+      <pre class="example2"><code class="language-html"></code></pre>
 
-        <h3>JavaScript:</h3>
-        <pre class="example1"><code class="language-javascript"></code></pre>
+      <h3>TypeScript:</h3>
+      <pre class="example2"><code class="language-typescript">
+            interface PlotData {
+                categories: string[];
+                series1: number[];
+                series2: number[];
+              }
+              
+              interface PlotSettings {
+                title: string;
+                xLabel: string;
+                yLabel: string;
+                barColors: string[];
+                legendLabels: string[];
+              }
+              
+              function range(start: number, end: number, step: number = 1): number[] {
+                return Array.from({ length: (end - start) / step + 1 }, (_, i) => start + i * step);
+              }
+              
+              document.addEventListener("DOMContentLoaded", () => {
+                const data: PlotData = {
+                  categories: ['A', 'B', 'C', 'D', 'E'],
+                  series1: [5, 3, 4, 7, 2],
+                  series2: [3, 2, 5, 6, 4]
+                };
+              
+                const settings: PlotSettings = {
+                  title: "Comparison of Series 1 and Series 2",
+                  xLabel: "Categories",
+                  yLabel: "Values",
+                  barColors: ['#FF0000', '#0000FF'],
+                  legendLabels: ['Series 1', 'Series 2']
+                };
+              
+                const example2 = document.getElementById("example2") as any; // Assuming easy-canvas can be interacted with like this.
+                example2.drawingLoop = function() {
+                  this.hotAndReady.multiBarPlot(data, settings);
+                }.bind(example2);
+              });              
 
-        <easy-canvas id="example2"></easy-canvas>
-        <script class="example2"></script>
+        </code></pre>
+
+        <h3>Rendered Result:</h3>
+        <div id="example2Div">
+            <easy-canvas
+              id="example2"
+              framerate="1.0"
+              xmin="0"
+              xpadding="15"
+              ypadding="10"
+              xmax="6.28"
+              ymin="-1"
+              ymax="1"
+              default-axes-on="false"
+              fontsize="25"
+            ></easy-canvas>
+          </div>
+          <script type="module" src="./dist/example2.bundle.js"></script>
 
     </details>
 
     <!-- Example 3 -->
     <details hidden>
-        <summary><h2>Example 3: Electric Boogaloo</h2></summary>
+      <summary><h2>Example 3: Electric Boogaloo</h2></summary>
 
-        <h3>HTML:</h3>
-        <pre class="example1"><code class="language-html"></code></pre>
+      <h3>HTML:</h3>
+      <pre class="example1"><code class="language-html"></code></pre>
 
-        <h3>JavaScript:</h3>
-        <pre class="example1"><code class="language-javascript"></code></pre>
+      <h3>JavaScript:</h3>
+      <pre class="example1"><code class="language-javascript"></code></pre>
 
-        <easy-canvas id="example2"></easy-canvas>
-        <script class="example2"></script>
-
+      <easy-canvas id="example2"></easy-canvas>
+      <script class="example2"></script>
     </details>
-
-
-
-
-
-
-
-
-
 
     <!-- Make example code visible for visitors. -->
     <script>
-        function escapeHTML(text) {
-            var map = {
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#039;'
-            };
-            text = text.replace(/[&<>"']/g, function (m) { return map[m]; });
-            let lines = text.split("\n");
-            let minSpaces = Infinity;
-            for(let l of lines){
-                if(l.trimLeft().length > 0){
-                    minSpaces = Math.min(minSpaces, l.length - l.trimLeft().length);
-                }
-            }
-            return lines.map(l => l.substr(minSpaces)).join("\n");
+      function escapeHTML(text) {
+        var map = {
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#039;",
+        };
+        text = text.replace(/[&<>"']/g, function (m) {
+          return map[m];
+        });
+        let lines = text.split("\n");
+        let minSpaces = Infinity;
+        for (let l of lines) {
+          if (l.trimLeft().length > 0) {
+            minSpaces = Math.min(minSpaces, l.length - l.trimLeft().length);
+          }
         }
+        return lines.map((l) => l.substr(minSpaces)).join("\n");
+      }
 
-        function renderCode(n) {
-            let html = document.querySelector(`pre.example${n} > code.language-html`);
-            let js = document.querySelector(`pre.example${n} > code.language-javascript`);
+      function renderCode(n) {
+        let html = document.querySelector(
+          `pre.example${n} > code.language-html`
+        );
+        let js = document.querySelector(
+          `pre.example${n} > code.language-javascript`
+        );
 
-            let ec = document.querySelector(`easy-canvas#example${n}`);
-            let script = document.querySelector(`script.example${n}`);
+        let ec = document.querySelector(`easy-canvas#example${n}`);
+        let script = document.querySelector(`script.example${n}`);
 
-            html.innerHTML = escapeHTML(ec.outerHTML);
-            js.innerHTML = escapeHTML(script.innerHTML);
-        }
+        html.innerHTML = escapeHTML(ec.outerHTML);
+        js.innerHTML = escapeHTML(script.innerHTML);
+      }
 
+      for (let i = 0; i < 100; i++) {
+        try {
+          renderCode(i);
+        } catch (e) {}
+      }
 
-        for(let i=0; i<100; i++){
-            try{
-                renderCode(i);
-            }
-            catch(e){};
-        }
-
-        hljs.highlightAll();
-
+      hljs.highlightAll();
     </script>
-
-</body>
-
+  </body>
 </html>

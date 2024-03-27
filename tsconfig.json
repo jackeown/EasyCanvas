@@ -6,6 +6,5 @@
         "lib": ["DOM", "ES2017"],
         "alwaysStrict": false,
         "noImplicitAny": false,
-        "noImplicitUseStrict": true,
     }
 }

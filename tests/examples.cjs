@@ -70,3 +70,21 @@ custom.renderPlot();
 assert.equal(custom.ctx.fillStyle, '#df6846');
 vm.runInContext(`{${snippets.quick.match(/<script>\n([\s\S]*?)<\/script>/)[1]}}`, sandbox);
 console.log('PASS: committed bundle runs all six examples, draws finite paths, links axes, hit-tests, and runs pure-JS quick start.');
+
+// Exercise the gallery's five independent plots against the unchanged bundle too.
+for (const id of ['lines', 'bars', 'custom', 'animation', 'dates']) {
+  const plot = document.createElement('easy-canvas');
+  plot.debug = false;
+  elements.set('gallery-' + id, plot);
+}
+document.querySelectorAll = () => [...elements.entries()].filter(([id]) => id.startsWith('gallery-')).map(([, plot]) => plot);
+sandbox.matchMedia = () => ({matches: false});
+const gallery = fs.readFileSync(path.join(root, 'docs/gallery.js'), 'utf8');
+vm.runInContext(gallery.split('const exampleDialog =')[0], sandbox);
+for (const [id, plot] of elements) {
+  if (!id.startsWith('gallery-')) continue;
+  const before = strokes;
+  plot.fixDPI(); plot.renderPlot();
+  assert.ok(strokes > before, `${id}: gallery draws visible finite paths`);
+}
+console.log('PASS: all five gallery charts draw with the original browser bundle.');

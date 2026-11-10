@@ -36,3 +36,10 @@ for (const [, pre, code, content] of blocks) {
 }
 assert.ok(html.includes('James McKeown'), 'Developer credit is present');
 console.log('PASS: every code block highlighted; complete copyable examples preserved.');
+
+new vm.Script(fs.readFileSync(path.join(root, 'docs/gallery.js'), 'utf8'));
+assert.equal((html.match(/class="gallery-title"/g) || []).length, 5);
+assert.ok(html.indexOf('id="gallery"') < html.indexOf('id="start"'), 'Gallery precedes long-form documentation');
+assert.match(html, /<dialog id="example-dialog" aria-labelledby="example-title"/);
+assert.match(html, /href="https:\/\/github.com\/mckeown12">James McKeown/);
+console.log('PASS: gallery navigation, modal accessibility, and linked developer credit.');

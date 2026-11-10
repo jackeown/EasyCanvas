@@ -1,4 +1,4 @@
-// Documentation-only behavior; the library bundle is unchanged.
+// Documentation examples and page interactions.
 for (const plot of document.querySelectorAll('easy-canvas')) {
   plot.debug = false;
   plot.setAttribute('fontsize', '22');
@@ -103,16 +103,24 @@ plot.drawingLoop = () => {
 {
 const plot = document.querySelector('#dates');
 const start = Date.UTC(2026, 0, 1);
+const time = Array.from({ length: 85 }, (_, i) => start + i * 7200000);
 const data = {
-  xs: Array.from({ length: 7 }, (_, i) => start + i * 86400000),
-  ys: [4, 6, 5, 9, 8, 12, 10]
+  time,
+  temperature: time.map((_, i) => 18 + 3 * Math.sin(i / 5)),
+  forecast: time.map((_, i) => 18 + 2.5 * Math.sin(i / 5 + 0.3))
 };
 plot.drawingLoop = () => {
   plot.hotAndReady.linePlot(data, {
-    title: 'One week of example data',
-    xLabel: 'Date', yLabel: 'Value',
-    xAxisIsTime: true, xTicks: 4,
-    colors: ['#2457dc']
+    title: 'A week of temperatures',
+    inputs: ['time', 'time'], outputs: ['temperature', 'forecast'],
+    xLabel: 'Time · UTC', yLabel: 'Temperature (°C)',
+    legendLabels: ['Observed', 'Forecast'],
+    colors: ['#2457dc', '#df6846'],
+    xAxisIsTime: true, timeZone: 'UTC', locale: 'en-GB', xTicks: 6,
+    tooltips: ['time', 'temperature'],
+    tooltipFormatters: { temperature: value => `${value.toFixed(1)} °C` }
+    // Optional: timeFormat: { month: 'short', day: 'numeric' }
+    // Or: xTickFormat: value => new Date(value).toISOString().slice(0, 10)
   });
 };
 }
@@ -160,3 +168,31 @@ const observer = new IntersectionObserver(entries => {
   }
 }, {rootMargin: '-10% 0px -65% 0px'});
 for (const section of document.querySelectorAll('main section')) observer.observe(section);
+
+// Native details provide keyboard-accessible reference sections; search opens matches.
+const apiSearch = document.querySelector('#api-search');
+const apiDetails = [...document.querySelectorAll('.api-detail')];
+apiSearch.addEventListener('input', () => {
+  const query = apiSearch.value.trim().toLowerCase();
+  let matches = 0;
+  for (const detail of apiDetails) {
+    const match = !query || detail.textContent.toLowerCase().includes(query);
+    detail.hidden = !match;
+    detail.open = Boolean(query && match);
+    if (match) matches++;
+  }
+  for (const family of document.querySelectorAll('.api-family')) {
+    family.hidden = ![...family.querySelectorAll('.api-detail')].some(detail => !detail.hidden);
+  }
+  document.querySelector('#api-search-status').textContent = query
+    ? matches ? matches + ' reference sections match.' : 'No matching API members. Try a method or option name.'
+    : '';
+});
+function revealReferenceTarget() {
+  const target = document.getElementById(location.hash.slice(1));
+  if (!target) return;
+  let detail = target.closest('details');
+  while (detail) { detail.open = true; detail = detail.parentElement.closest('details'); }
+}
+window.addEventListener('hashchange', revealReferenceTarget);
+revealReferenceTarget();

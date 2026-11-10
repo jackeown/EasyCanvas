@@ -9,11 +9,13 @@ const registry = new Map();
 const elements = new Map();
 let strokes = 0;
 let fills = 0;
+const textLabels = [];
 const coordinateMethods = new Set(['moveTo', 'lineTo', 'translate', 'rotate', 'clearRect', 'rect', 'fillRect', 'arc']);
 const ctx = new Proxy({}, {
   get(target, key) {
     if (!(key in target)) target[key] = (...args) => {
       if (coordinateMethods.has(key)) for (const n of args) assert.ok(Number.isFinite(n), `${key}: finite coordinate, got ${n}`);
+      if (key === 'fillText') textLabels.push(String(args[0]));
       if (key === 'stroke') strokes++;
       if (key === 'fill' || key === 'fillRect') fills++;
     };
@@ -73,7 +75,7 @@ assert.equal(custom.ctx.fillStyle, '#df6846');
 vm.runInContext(`{${snippets.quick.match(/<script>\n([\s\S]*?)<\/script>/)[1]}}`, sandbox);
 console.log('PASS: committed bundle runs all six examples, draws finite paths, links axes, hit-tests, and runs pure-JS quick start.');
 
-// Exercise the gallery's five independent plots against the unchanged bundle too.
+// Exercise the gallery's five independent plots against the committed bundle too.
 for (const id of ['lines', 'bars', 'custom', 'animation', 'dates']) {
   const plot = document.createElement('easy-canvas');
   plot.debug = false;
@@ -89,7 +91,7 @@ for (const [id, plot] of elements) {
   plot.fixDPI(); plot.renderPlot();
   assert.ok(strokes > before, `${id}: gallery draws visible finite paths`);
 }
-console.log('PASS: all five gallery charts draw with the original browser bundle.');
+console.log('PASS: all five gallery charts draw with the committed browser bundle.');
 
 const customExamples = JSON.parse(fs.readFileSync(path.join(root, 'docs/custom-examples.json')));
 for (const [id, example] of Object.entries(customExamples)) {
@@ -108,3 +110,47 @@ for (const [id, example] of Object.entries(customExamples)) {
   sandbox.matchMedia = () => ({matches: false});
 }
 console.log('PASS: four custom experiments draw finite paths and handle pointer/reduced-motion inputs.');
+
+// Render tick callbacks and formatted tooltips through the actual browser bundle.
+const timePlot = document.createElement('easy-canvas');
+timePlot.debug = false;
+const startTime = Date.UTC(2026, 0, 1);
+const timeData = {time: [startTime, startTime + 1123], value: [21, 22]};
+const timeSettings = {inputs:['time'], outputs:['value'], xAxisIsTime:true, locale:'en-GB', timeZone:'UTC', tooltips:['time','value'], xTickFormat: v => 'tick-' + v, tooltipFormatters:{value: v => v.toFixed(1) + ' °C'}};
+timePlot.drawingLoop = () => timePlot.hotAndReady.linePlot(timeData, timeSettings);
+timePlot.fixDPI();
+timePlot.mouseX = startTime + 1123; timePlot.mouseY = 22;
+textLabels.length = 0;
+timePlot.renderPlot();
+assert.ok(textLabels.some(text => text.startsWith('tick-')), 'Custom tick formatting reaches the canvas');
+assert.ok(textLabels.includes('22.0 °C'), 'Custom tooltip formatting reaches the canvas');
+assert.ok(textLabels.some(text => text.includes('2026') && text.includes('00:00:01.123') && text.includes('UTC')), 'Date tooltip preserves milliseconds and timezone');
+timeSettings.tooltipFormatters.time = () => 'CUSTOM DATE';
+textLabels.length = 0; timePlot.renderPlot();
+assert.ok(textLabels.includes('CUSTOM DATE'), 'Column formatter overrides automatic date tooltip');
+
+const timeDemo = fs.readFileSync(path.join(root, 'docs/time-demo.js'), 'utf8');
+vm.runInContext(timeDemo.split('for (const container')[0] + '\nglobalThis.setupDateDemo = setupTimeDemo;', sandbox);
+const fields = Object.fromEntries(Object.entries({range:'604800000', zone:'UTC', locale:'en-GB', format:'auto', ticks:'6'}).map(([key,value]) => [key,{value}]));
+let change;
+const status = {textContent:''};
+const controls = {
+ querySelector(selector) {
+  if (selector === '.time-status') return status;
+  if (selector === '[data-time-reset]') return {addEventListener() {}};
+  return fields[selector.match(/name="([^"]+)"/)[1]];
+ },
+ addEventListener(type, callback) { if (type === 'change') change = callback; }
+};
+sandbox.setupDateDemo(timePlot, controls);
+for (const span of ['500','30000','1800000','86400000','604800000','157680000000']) {
+ for (const zone of ['UTC','Europe/Vienna','America/New_York']) {
+  for (const mode of ['auto','detailed','iso']) {
+   fields.range.value = span; fields.zone.value = zone; fields.format.value = mode;
+   change();
+   assert.equal(timePlot.xmax - timePlot.xmin, Number(span));
+   assert.ok(status.textContent.includes('Synthetic data'));
+  }
+ }
+}
+console.log('PASS: tick and tooltip callbacks, readable dates, and 54 time-demo configurations.');

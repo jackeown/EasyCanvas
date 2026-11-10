@@ -14,3 +14,11 @@ plot.hotAndReady.linePlot({xs: ['wrong'], ys: [1]}, {});
 // @ts-expect-error Known settings should catch misspellings.
 const bad: LinePlotSettings = {lineWitdh: 3};
 void bad;
+
+const timeSettings: LinePlotSettings = {
+  xAxisIsTime: true, locale: 'en-GB', timeZone: 'Europe/Vienna',
+  timeFormat: {month: 'short', day: 'numeric'},
+  xTickFormat: value => new Date(value).toISOString(),
+  tooltipFormatters: {temperature: (value, index) => `${index}: ${value.toFixed(1)} °C`}
+};
+plot.drawDefaultAxes(timeSettings);

@@ -93,16 +93,24 @@ plot.drawingLoop = () => {
 {
 const plot = document.querySelector('#gallery-dates');
 const start = Date.UTC(2026, 0, 1);
+const time = Array.from({ length: 85 }, (_, i) => start + i * 7200000);
 const data = {
-  xs: Array.from({ length: 7 }, (_, i) => start + i * 86400000),
-  ys: [4, 6, 5, 9, 8, 12, 10]
+  time,
+  temperature: time.map((_, i) => 18 + 3 * Math.sin(i / 5)),
+  forecast: time.map((_, i) => 18 + 2.5 * Math.sin(i / 5 + 0.3))
 };
 plot.drawingLoop = () => {
   plot.hotAndReady.linePlot(data, {
-    title: 'One week of example data',
-    xLabel: 'Date', yLabel: 'Value',
-    xAxisIsTime: true, xTicks: 4,
-    colors: ['#2457dc']
+    title: 'A week of temperatures',
+    inputs: ['time', 'time'], outputs: ['temperature', 'forecast'],
+    xLabel: 'Time · UTC', yLabel: 'Temperature (°C)',
+    legendLabels: ['Observed', 'Forecast'],
+    colors: ['#2457dc', '#df6846'],
+    xAxisIsTime: true, timeZone: 'UTC', locale: 'en-GB', xTicks: 6,
+    tooltips: ['time', 'temperature'],
+    tooltipFormatters: { temperature: value => `${value.toFixed(1)} °C` }
+    // Optional: timeFormat: { month: 'short', day: 'numeric' }
+    // Or: xTickFormat: value => new Date(value).toISOString().slice(0, 10)
   });
 };
 }

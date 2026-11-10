@@ -72,3 +72,16 @@ for (const [id, example] of Object.entries(custom)) {
   assert.ok(home.includes('id="gallery-' + id + '"'), id + ': gallery element exists');
 }
 console.log('PASS: custom gallery code and modal source share one definition.');
+
+assert.ok(html.indexOf('id="reference"') < html.indexOf('id="start"'), 'API reference is prominent');
+assert.equal((html.match(/class="api-detail"/g) || []).length, 8, 'Reference has organized collapsible sections');
+assert.ok(html.includes('id="api-search"'));
+assert.ok(html.includes('id="api-hotandready"') && html.includes('id="api-core"'));
+for (const page of [home, html]) {
+  assert.ok(page.includes('href="https://github.com/jackeown">Jack McKeown'));
+  assert.ok(!page.includes('href="https://jackeown.github.io">Jack McKeown'));
+  assert.ok(page.includes('data-time-demo'));
+}
+const timeScript = fs.readFileSync(path.join(root, 'docs/time-demo.js'), 'utf8');
+new vm.Script(timeScript);
+console.log('PASS: prominent collapsible API reference, time controls, and GitHub developer links.');

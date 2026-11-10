@@ -60,7 +60,7 @@ Load the browser bundle in your HTML for the runtime and give the plot a size be
 
 ## Source & compatibility
 
-This is the original repository, with its history preserved. The stable `master` branch contains `easyCanvas.js`, `easyCanvasHotAndReady.js`, `helpers.js`, and the browser-ready `easyCanvas.bundle.js`. The documentation refresh leaves these runtime files unchanged, keeping the old blog posts and CDN paths working.
+This is the original repository, with its history preserved. The stable `master` branch contains `easyCanvas.js`, `easyCanvasHotAndReady.js`, `helpers.js`, and the browser-ready `easyCanvas.bundle.js`. The original API and script URLs remain available. Optional time-axis formatting, custom tick/tooltip callbacks, and readable date tooltips extend that API without replacing the plotting helpers.
 
 The later [TypeScript implementation](https://github.com/jackeown/EasyCanvas/tree/typescript) and [mask experiment](https://github.com/jackeown/EasyCanvas/tree/masks) remain on their original branches. They are not merged into the stable API. The declarations on `master` describe the stable browser bundle.
 
@@ -90,8 +90,14 @@ GitHub Pages serves the root of `master`; `.nojekyll` keeps these static files a
 
 Vercel is not needed. `vercel.json` disables automatic deployments from the old Vercel Git integration. The docs, examples, and downloadable bundle are hosted entirely on GitHub Pages.
 
-Code highlighting is pre-rendered with Prism (MIT; see `docs/PRISM-LICENSE.txt`), so the site needs no runtime highlighting dependency. After editing a code block, run `npm run docs:highlight`. Setup lines are muted to 40% opacity; hover any muted line to brighten all setup lines in that block. Keyboard focus on the code block also restores full contrast.
+Code highlighting is pre-rendered with Prism (MIT; see `docs/PRISM-LICENSE.txt`), so the site needs no runtime highlighting dependency. After editing a code block, run `npm run docs:highlight`. Setup lines are muted to 40% opacity; hover anywhere in the code region, including whitespace, to brighten all setup lines in that block. Keyboard focus on the code block also restores full contrast.
 
 The homepage opens with classic graphs and custom drawing experiments. Click a chart title for its highlighted code and explanation; close the dialog with Escape, the close button, or the backdrop. The full documentation lives separately at `guide.html`, keeping the homepage focused on the gallery.
 
 Custom gallery examples live in `docs/custom-examples.json`. Run `npm run docs:highlight` after edits to generate both their executable code and highlighted modal source.
+
+## Time axes and tooltips
+
+Set `xAxisIsTime: true` (or `yAxisIsTime`) for millisecond timestamps. Optional `locale`, `timeZone` and `timeFormat` settings use `Intl.DateTimeFormat`; omitting them preserves the original automatic tick labels. `xTickFormat` and `yTickFormat` accept callbacks for arbitrary tick formatting. `tooltipFormatters` maps data column names to `(value, index) => string`; date columns on time axes get readable timestamps by default.
+
+The interactive date demo covers milliseconds through years, locales, timezones, custom labels and resetting the view. The [API reference](https://jackeown.github.io/EasyCanvas/guide.html#reference) is grouped into collapsible, searchable sections for hotAndReady and the core canvas API.

@@ -7,11 +7,21 @@ export interface PlotLabels {
   colors?: string[];
   autoScale?: boolean;
 }
-export interface LinePlotSettings extends PlotLabels {
+export interface TimeAxisOptions {
+  /** Browser locale by default, for example en-GB or de-AT. */
+  locale?: string;
+  /** Browser timezone by default; UTC or an IANA zone such as Europe/Vienna. */
+  timeZone?: string;
+  timeFormat?: Intl.DateTimeFormatOptions;
+  xTickFormat?: (value: number) => string;
+  yTickFormat?: (value: number) => string;
+}
+export interface LinePlotSettings extends PlotLabels, TimeAxisOptions {
   inputs?: string[];
   outputs?: string[];
   lineWidth?: number;
   tooltips?: string[];
+  tooltipFormatters?: Record<string, (value: number, index: number) => string>;
   xmin?: number;
   xmax?: number;
   ymin?: number;
@@ -30,11 +40,12 @@ export interface LabelSettings {
   textAlign?: CanvasTextAlign;
   textBaseline?: CanvasTextBaseline;
 }
-export interface DefaultAxesSettings {
+export interface DefaultAxesSettings extends TimeAxisOptions {
   xTicks?: number; yTicks?: number;
   xAxisIsTime?: boolean; yAxisIsTime?: boolean;
 }
-export interface AxisSettings {
+export interface AxisSettings extends Pick<TimeAxisOptions, "locale" | "timeZone" | "timeFormat"> {
+  tickFormat?: (value: number) => string;
   x1: number; y1: number; x2: number; y2: number;
   labelXOffset: number; labelYOffset: number; labelTheta: number;
   nTicks: number;

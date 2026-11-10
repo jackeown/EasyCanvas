@@ -142,7 +142,7 @@ function rescaleAxes(xmin,xmax,ymin,ymax){
 }
 
 
-function getLinePlotTooltip(data, inputs, outputs, tooltips, epsilon=100){
+function getLinePlotTooltip(data, inputs, outputs, tooltips, epsilon=100, settings={}){
     // make sure inputs has exactly one unique element.
     if(new Set(inputs).size != 1){
         console.log("in order to have tooltips on a line plot, all inputs must be the same.");
@@ -200,7 +200,20 @@ function getLinePlotTooltip(data, inputs, outputs, tooltips, epsilon=100){
     let y = data[output][index];
     let info = {};
     for(let tooltip of tooltips){
-        let text = String(data[tooltip][index]);
+        const value = data[tooltip][index];
+        if (settings.tooltipFormatters && settings.tooltipFormatters[tooltip]) {
+            info[tooltip] = String(settings.tooltipFormatters[tooltip](value, index));
+            continue;
+        }
+        if ((settings.xAxisIsTime && inputs.includes(tooltip)) ||
+            (settings.yAxisIsTime && outputs.includes(tooltip))) {
+            info[tooltip] = helpers.formatTime(value, 86400000, {
+                ...settings,
+                timeFormat: settings.timeFormat || {year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZoneName: 'short', ...(value % 1000 ? {fractionalSecondDigits: 3} : {})}
+            });
+            continue;
+        }
+        let text = String(value);
         if(isNaN(text)){
             info[tooltip] = text.slice(0,8) + "...";
         }
@@ -271,7 +284,9 @@ function linePlot(data, settings){
         xTicks: xTicks,
         yTicks: yTicks,
         xAxisIsTime: xAxisIsTime,
-        yAxisIsTime: yAxisIsTime
+        yAxisIsTime: yAxisIsTime,
+        xTickFormat: settings.xTickFormat, yTickFormat: settings.yTickFormat,
+        locale: settings.locale, timeZone: settings.timeZone, timeFormat: settings.timeFormat
     });
 
 
@@ -282,7 +297,7 @@ function linePlot(data, settings){
 
     // draw tooltips
     if(tooltips.length != 0 && this.mouseX !== undefined){
-        let tooltip = getLinePlotTooltip.bind(this)(data, inputs, outputs, tooltips);
+        let tooltip = getLinePlotTooltip.bind(this)(data, inputs, outputs, tooltips, 100, settings);
         if(tooltip != undefined){
             let {x,y,info} = tooltip;
             drawTooltip.bind(this)(x,y,info);
@@ -291,10 +306,8 @@ function linePlot(data, settings){
     
     if(this.hotAndReadyEventListeners["linePlot"] === undefined){
         function listener(){
-            let tooltip = getLinePlotTooltip.bind(this)(data, inputs, outputs, tooltips);
-            if(tooltip != undefined){
-                this.renderPlot();
-            }
+            // Redraw from the current drawingLoop, not data captured on the first call.
+            this.renderPlot();
         };
 
         this.hotAndReadyEventListeners["linePlot"] = {

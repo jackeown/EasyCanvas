@@ -12,7 +12,7 @@ pre .token.function,pre .token.class-name{color:#91d9ee}
 pre .token.regex,pre .token.important{color:#f1ca91}
 pre .token.variable{color:#e2e9f2}
 pre .code-context{opacity:.4;transition:opacity .15s}
-pre:has(.code-context:hover) .code-context,pre:focus-visible .code-context{opacity:1}
+pre:hover .code-context,pre:focus-within .code-context{opacity:1}
 pre:focus-visible{outline:3px solid #df6846;outline-offset:3px}
 @media(prefers-reduced-motion:reduce){pre .code-context{transition:none}}
 /* Compact introduction and a chart-first gallery. */
@@ -67,3 +67,38 @@ header:has(.header-guide)>a:last-child{margin-left:0}
 .gallery-group easy-canvas,.gallery-group .gallery-card:nth-child(n+4) easy-canvas{height:220px}
 @media(max-width:650px){.gallery-group .gallery-card,.gallery-group .gallery-card:nth-child(n+4){grid-column:span 1}#classic-graphs .gallery-card:last-child{grid-column:span 2}.gallery-group easy-canvas,.gallery-group .gallery-card:nth-child(n+4) easy-canvas{height:190px}}
 @media(max-width:440px){#classic-graphs .gallery-card:last-child{grid-column:span 1}.gallery-group easy-canvas,.gallery-group .gallery-card:nth-child(n+4) easy-canvas{height:220px}}
+/* Region hover includes whitespace and padding, avoiding flicker between glyphs. */
+.guide-intro{padding:36px 0;border-bottom:1px solid var(--line)}
+.guide-intro h1{font-size:40px;letter-spacing:-1.5px;margin:14px 0}
+.guide-intro>p{font-size:15px}.guide-intro>a{font-size:13px}
+.guide-paths{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:24px 0}
+.guide-paths a{border:1px solid var(--line);padding:18px;text-decoration:none;border-radius:5px;background:white}
+.guide-paths strong,.guide-paths span{display:block}.guide-paths span{font-size:12px;color:var(--muted)}
+nav .nav-api{color:var(--blue);font-weight:650}
+.api-search-label{display:block;font-size:12px;color:var(--muted);margin:24px 0 0}
+#api-search{display:block;width:100%;margin-top:7px;padding:12px 14px;border:1px solid var(--line);border-radius:5px;background:white;color:var(--ink);font:14px system-ui}
+.api-columns{display:grid;grid-template-columns:1fr;gap:24px}
+.api-family-heading{padding:10px 0}.api-family-heading h3{margin:10px 0 6px;font-size:23px}.api-family-heading p{font-size:13px;margin:0}
+.api-tag{font:10px var(--mono);letter-spacing:1px;color:var(--blue)}
+.api-detail{margin:10px 0;background:#fff;border:1px solid var(--line);border-radius:5px}
+.api-detail summary{cursor:pointer;list-style:none;padding:16px 20px;display:flex;align-items:center;gap:14px}
+.api-detail summary::-webkit-details-marker{display:none}
+.api-detail summary:before{content:'+';color:var(--blue);font:20px var(--mono);width:16px;flex-shrink:0}
+.api-detail[open]>summary:before{content:'−'}
+.api-detail summary strong{font:14px var(--mono);color:var(--ink)}
+.api-detail summary small{display:block;color:var(--muted);font:12px system-ui;margin-top:5px}
+.api-detail summary:hover{background:#f1f4fb}.api-detail summary:focus-visible{outline:3px solid #df6846;outline-offset:2px}
+.api-detail[open]>summary{border-bottom:1px solid var(--line)}
+.api-detail-body{padding:4px 20px 12px;font-size:14px}
+.api-detail-body table{font-size:12px;margin-top:12px}.api-detail-body td:first-child{width:37%}
+.api-detail-body code{font-size:12px}.api-detail-body p{font-size:13px}
+.api-detail[hidden],.api-family[hidden]{display:none}
+.time-controls{display:flex;flex-wrap:wrap;align-items:end;gap:10px 14px;padding:8px 4px}
+.time-controls label{display:flex;flex-direction:column;font-size:10px;gap:4px;color:var(--muted)}
+.time-controls select{font:12px system-ui;padding:6px;border:1px solid var(--line);border-radius:4px;background:white;color:var(--ink);max-width:165px}
+.time-status{font:11px/1.7 var(--mono);margin:8px 4px;color:var(--muted)}
+#classic-graphs .gallery-card{grid-column:span 3}
+#classic-graphs .gallery-card:has([data-time-demo]){grid-column:1/-1}
+#classic-graphs [data-time-demo] easy-canvas{height:290px}
+@media(max-width:650px){.guide-intro h1{font-size:30px}.guide-paths{grid-template-columns:1fr}.api-detail summary{padding:14px}.api-detail-body{padding:4px 12px 12px}#classic-graphs .gallery-card{grid-column:span 1}#classic-graphs .gallery-card:has([data-time-demo]){grid-column:1/-1}.time-controls{gap:8px}.time-controls select{font-size:11px;max-width:135px}.time-status{font-size:10px}#classic-graphs [data-time-demo] easy-canvas{height:260px}}
+aside{overflow-y:auto}

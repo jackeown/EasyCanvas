@@ -457,8 +457,11 @@ class EasyCanvas extends HTMLElement {
             }
             else if(!isNaN(scaleStart) && !isNaN(scaleEnd)){
                 let label;
-                if(isDatetime){
-                    label = helpers.getTimeLabel(i,nTicks,scaleStart,scaleEnd);
+                if (settings.tickFormat) {
+                    label = settings.tickFormat(scaleStart + (scaleEnd - scaleStart) * i / nTicks);
+                }
+                else if(isDatetime){
+                    label = helpers.getTimeLabel(i,nTicks,scaleStart,scaleEnd,settings);
                 }
                 else{
                     label = scaleStart + (scaleEnd-scaleStart)*(i/nTicks);
@@ -495,7 +498,9 @@ class EasyCanvas extends HTMLElement {
             labels: undefined,
             scaleStart: this.xmin,
             scaleEnd: this.xmax,
-            isDatetime: xAxisIsTime
+            isDatetime: xAxisIsTime,
+            tickFormat: settings.xTickFormat,
+            locale: settings.locale, timeZone: settings.timeZone, timeFormat: settings.timeFormat
         })
     
         // y-axis
@@ -512,7 +517,9 @@ class EasyCanvas extends HTMLElement {
             labels: undefined,
             scaleStart: this.ymin,
             scaleEnd: this.ymax,
-            isDatetime: yAxisIsTime
+            isDatetime: yAxisIsTime,
+            tickFormat: settings.yTickFormat,
+            locale: settings.locale, timeZone: settings.timeZone, timeFormat: settings.timeFormat
         })
     }
 
@@ -740,7 +747,7 @@ function rescaleAxes(xmin,xmax,ymin,ymax){
 }
 
 
-function getLinePlotTooltip(data, inputs, outputs, tooltips, epsilon=100){
+function getLinePlotTooltip(data, inputs, outputs, tooltips, epsilon=100, settings={}){
     // make sure inputs has exactly one unique element.
     if(new Set(inputs).size != 1){
         console.log("in order to have tooltips on a line plot, all inputs must be the same.");
@@ -798,7 +805,20 @@ function getLinePlotTooltip(data, inputs, outputs, tooltips, epsilon=100){
     let y = data[output][index];
     let info = {};
     for(let tooltip of tooltips){
-        let text = String(data[tooltip][index]);
+        const value = data[tooltip][index];
+        if (settings.tooltipFormatters && settings.tooltipFormatters[tooltip]) {
+            info[tooltip] = String(settings.tooltipFormatters[tooltip](value, index));
+            continue;
+        }
+        if ((settings.xAxisIsTime && inputs.includes(tooltip)) ||
+            (settings.yAxisIsTime && outputs.includes(tooltip))) {
+            info[tooltip] = helpers.formatTime(value, 86400000, {
+                ...settings,
+                timeFormat: settings.timeFormat || {year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZoneName: 'short', ...(value % 1000 ? {fractionalSecondDigits: 3} : {})}
+            });
+            continue;
+        }
+        let text = String(value);
         if(isNaN(text)){
             info[tooltip] = text.slice(0,8) + "...";
         }
@@ -869,7 +889,9 @@ function linePlot(data, settings){
         xTicks: xTicks,
         yTicks: yTicks,
         xAxisIsTime: xAxisIsTime,
-        yAxisIsTime: yAxisIsTime
+        yAxisIsTime: yAxisIsTime,
+        xTickFormat: settings.xTickFormat, yTickFormat: settings.yTickFormat,
+        locale: settings.locale, timeZone: settings.timeZone, timeFormat: settings.timeFormat
     });
 
 
@@ -880,7 +902,7 @@ function linePlot(data, settings){
 
     // draw tooltips
     if(tooltips.length != 0 && this.mouseX !== undefined){
-        let tooltip = getLinePlotTooltip.bind(this)(data, inputs, outputs, tooltips);
+        let tooltip = getLinePlotTooltip.bind(this)(data, inputs, outputs, tooltips, 100, settings);
         if(tooltip != undefined){
             let {x,y,info} = tooltip;
             drawTooltip.bind(this)(x,y,info);
@@ -889,10 +911,8 @@ function linePlot(data, settings){
     
     if(this.hotAndReadyEventListeners["linePlot"] === undefined){
         function listener(){
-            let tooltip = getLinePlotTooltip.bind(this)(data, inputs, outputs, tooltips);
-            if(tooltip != undefined){
-                this.renderPlot();
-            }
+            // Redraw from the current drawingLoop, not data captured on the first call.
+            this.renderPlot();
         };
 
         this.hotAndReadyEventListeners["linePlot"] = {
@@ -1014,7 +1034,32 @@ function dist(x1,y1,x2,y2){
     return Math.sqrt(Math.pow(x2-x1,2) + Math.pow(y2-y1,2));
 }
 
-function getTimeLabel(i, nTicks, scaleStart, scaleEnd){
+const timeFormatters = new Map();
+
+// Opt-in Intl formatting keeps the original automatic labels unchanged by default.
+function formatTime(value, span, options = {}) {
+    const range = Math.abs(span);
+    let format;
+    if (range >= 2 * 365 * 86400000) format = {year: 'numeric'};
+    else if (range >= 60 * 86400000) format = {year: 'numeric', month: 'short'};
+    else if (range >= 86400000) format = {month: 'short', day: 'numeric'};
+    else if (range >= 60000) format = {hour: '2-digit', minute: '2-digit', hourCycle: 'h23'};
+    else if (range >= 1000) format = {minute: '2-digit', second: '2-digit'};
+    else format = {second: '2-digit', fractionalSecondDigits: 3};
+    const config = {...(options.timeFormat || format)};
+    if (options.timeZone) config.timeZone = options.timeZone;
+    const key = JSON.stringify([options.locale, config]);
+    if (!timeFormatters.has(key)) {
+        if (timeFormatters.size >= 64) timeFormatters.clear();
+        timeFormatters.set(key, new Intl.DateTimeFormat(options.locale, config));
+    }
+    return timeFormatters.get(key).format(new Date(value));
+}
+
+function getTimeLabel(i, nTicks, scaleStart, scaleEnd, options = {}){
+    if (options.locale || options.timeZone || options.timeFormat) {
+        return formatTime(scaleStart + (scaleEnd - scaleStart) * i / nTicks, scaleEnd - scaleStart, options);
+    }
     let start = new Date(scaleStart);
     let now = new Date(scaleStart + (scaleEnd-scaleStart)*(i/nTicks));
     let end = new Date(scaleEnd);
@@ -1076,7 +1121,8 @@ module.exports = {
     "defaultVal": defaultVal,
     "defaultVals": defaultVals,
     "dist": dist,
-    "getTimeLabel": getTimeLabel
+    "getTimeLabel": getTimeLabel,
+    "formatTime": formatTime
 }
 
 

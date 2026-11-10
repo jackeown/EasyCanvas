@@ -25,7 +25,32 @@ function dist(x1,y1,x2,y2){
     return Math.sqrt(Math.pow(x2-x1,2) + Math.pow(y2-y1,2));
 }
 
-function getTimeLabel(i, nTicks, scaleStart, scaleEnd){
+const timeFormatters = new Map();
+
+// Opt-in Intl formatting keeps the original automatic labels unchanged by default.
+function formatTime(value, span, options = {}) {
+    const range = Math.abs(span);
+    let format;
+    if (range >= 2 * 365 * 86400000) format = {year: 'numeric'};
+    else if (range >= 60 * 86400000) format = {year: 'numeric', month: 'short'};
+    else if (range >= 86400000) format = {month: 'short', day: 'numeric'};
+    else if (range >= 60000) format = {hour: '2-digit', minute: '2-digit', hourCycle: 'h23'};
+    else if (range >= 1000) format = {minute: '2-digit', second: '2-digit'};
+    else format = {second: '2-digit', fractionalSecondDigits: 3};
+    const config = {...(options.timeFormat || format)};
+    if (options.timeZone) config.timeZone = options.timeZone;
+    const key = JSON.stringify([options.locale, config]);
+    if (!timeFormatters.has(key)) {
+        if (timeFormatters.size >= 64) timeFormatters.clear();
+        timeFormatters.set(key, new Intl.DateTimeFormat(options.locale, config));
+    }
+    return timeFormatters.get(key).format(new Date(value));
+}
+
+function getTimeLabel(i, nTicks, scaleStart, scaleEnd, options = {}){
+    if (options.locale || options.timeZone || options.timeFormat) {
+        return formatTime(scaleStart + (scaleEnd - scaleStart) * i / nTicks, scaleEnd - scaleStart, options);
+    }
     let start = new Date(scaleStart);
     let now = new Date(scaleStart + (scaleEnd-scaleStart)*(i/nTicks));
     let end = new Date(scaleEnd);
@@ -87,7 +112,8 @@ module.exports = {
     "defaultVal": defaultVal,
     "defaultVals": defaultVals,
     "dist": dist,
-    "getTimeLabel": getTimeLabel
+    "getTimeLabel": getTimeLabel,
+    "formatTime": formatTime
 }
 
 

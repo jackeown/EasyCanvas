@@ -456,8 +456,11 @@ class EasyCanvas extends HTMLElement {
             }
             else if(!isNaN(scaleStart) && !isNaN(scaleEnd)){
                 let label;
-                if(isDatetime){
-                    label = helpers.getTimeLabel(i,nTicks,scaleStart,scaleEnd);
+                if (settings.tickFormat) {
+                    label = settings.tickFormat(scaleStart + (scaleEnd - scaleStart) * i / nTicks);
+                }
+                else if(isDatetime){
+                    label = helpers.getTimeLabel(i,nTicks,scaleStart,scaleEnd,settings);
                 }
                 else{
                     label = scaleStart + (scaleEnd-scaleStart)*(i/nTicks);
@@ -494,7 +497,9 @@ class EasyCanvas extends HTMLElement {
             labels: undefined,
             scaleStart: this.xmin,
             scaleEnd: this.xmax,
-            isDatetime: xAxisIsTime
+            isDatetime: xAxisIsTime,
+            tickFormat: settings.xTickFormat,
+            locale: settings.locale, timeZone: settings.timeZone, timeFormat: settings.timeFormat
         })
     
         // y-axis
@@ -511,7 +516,9 @@ class EasyCanvas extends HTMLElement {
             labels: undefined,
             scaleStart: this.ymin,
             scaleEnd: this.ymax,
-            isDatetime: yAxisIsTime
+            isDatetime: yAxisIsTime,
+            tickFormat: settings.yTickFormat,
+            locale: settings.locale, timeZone: settings.timeZone, timeFormat: settings.timeFormat
         })
     }
 

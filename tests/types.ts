@@ -1,0 +1,16 @@
+import type { EasyCanvasElement, LinePlotSettings, BarPlotData } from '../easyCanvas';
+const plot = document.createElement('easy-canvas');
+const typed: EasyCanvasElement = plot;
+const settings: LinePlotSettings = {inputs: ['x'], outputs: ['y'], xAxisIsTime: true};
+plot.drawingLoop = () => {
+  typed.hotAndReady.linePlot({x: [0, 1], y: [2, 3]}, settings);
+  typed.ctx.fillRect(typed.scaleX(0), typed.scaleY(2), 5, 5);
+};
+const bars: BarPlotData = {bars: ['A', 'B'], heights: [2, 3]};
+plot.hotAndReady.barPlot(bars, {legendLabels: bars.bars});
+plot.linkInfo(['xmin', 'xmax'], {});
+// @ts-expect-error Numeric data is required.
+plot.hotAndReady.linePlot({xs: ['wrong'], ys: [1]}, {});
+// @ts-expect-error Known settings should catch misspellings.
+const bad: LinePlotSettings = {lineWitdh: 3};
+void bad;

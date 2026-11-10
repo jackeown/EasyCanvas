@@ -1,186 +1,148 @@
-<html lang="en">
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EasyCanvas — HTML canvas the easy way</title><meta name="description" content="Simple plots from plain JavaScript or TypeScript. EasyCanvas documentation, live examples, and API reference.">
+<link rel="stylesheet" href="docs/style.css"><script src="easyCanvas.bundle.js" defer></script><script src="docs/site.js" defer></script></head>
+<body><a class="skip" href="#main">Skip to content</a>
+<header><a class="brand" href="#">easy<span>Canvas</span><span class="brand-dot">.</span></a><span class="header-note">A little canvas. A lot of possibility.</span><a href="https://github.com/jackeown/EasyCanvas">Source on GitHub ↗</a></header>
+<div class="layout"><aside><div class="nav-label">DOCUMENTATION</div><nav aria-label="Documentation"><a href="#start">Get started</a><a href="#line-plots">Line plots</a><a href="#bar-plots">Bar plots</a><a href="#linked">Linked plots</a><a href="#custom-drawing">Custom drawing</a><a href="#animation-updates">Animation & updates</a><a href="#time-axes">Time axes</a><a href="#typescript">TypeScript</a><a href="#reference">API reference</a><a href="#notes">Notes & development</a></nav><div class="aside-foot">Made by <a href="https://jackeown.github.io">Jack McKeown</a><br>Plain JS. Your coordinates.</div></aside>
+<main id="main"><div class="hero"><div class="eyebrow">HTML CANVAS THE EASY WAY</div><h1>Your data.<br>Your drawing.<br><em>Less setup.</em></h1><p class="lead">Make a plot with a few lines of JavaScript. Then keep going: the canvas context is right there when you want to draw something of your own.</p><a class="primary" href="#start">Make your first plot ↓</a><a class="secondary" href="easyCanvas.bundle.js" download>Download the library ↗</a><div class="hero-meta">No framework · No runtime package dependencies · One script</div></div>
+<section id="start"><div class="section-number">01 / START HERE</div><h2>A plot, from plain JavaScript.</h2><p>Load one script, create an <code>easy-canvas</code>, and give it a drawing function. No special HTML needed. Save this complete example as <code>index.html</code> and open it in a browser, or <a href="examples/quick-start.html">open the standalone example</a>.</p><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code>&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;title&gt;My first EasyCanvas plot&lt;/title&gt;
+&lt;script src=&quot;https://jackeown.github.io/EasyCanvas/easyCanvas.bundle.js&quot;&gt;&lt;/script&gt;
+&lt;body&gt;
+&lt;script&gt;
+const plot = document.createElement(&#x27;easy-canvas&#x27;);
+plot.style.cssText = &#x27;display:block; width:100%; height:360px&#x27;;
+document.body.appendChild(plot);
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Easy Canvas Testing</title>
-    <style>
-        body {
-            width: 80%;
-            margin: auto;
-            padding: 5em;
-            box-shadow: 0px 0px 20px 0px black;
-            font-family: OpenSans, Roboto;
-        }
+const data = { xs: [0, 1, 2, 3, 4], ys: [1, 3, 2, 5, 4] };
+plot.drawingLoop = () =&gt; {
+  plot.hotAndReady.linePlot(data, {
+    title: &#x27;My first plot&#x27;,
+    xLabel: &#x27;Time&#x27;, yLabel: &#x27;Value&#x27;
+  });
+};
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre></div><p>Prefer markup? Use <code>&lt;easy-canvas id="my-plot" style="display:block;height:360px"&gt;&lt;/easy-canvas&gt;</code> and get it with <code>document.getElementById('my-plot')</code>. Either way, give the element a real width and height.</p><p>The script registers the custom element automatically. Load it once, before your plotting code. You can also download the bundle and use a relative script URL.</p></section>
+<section id="line-plots"><div class="section-number">02 / EVERYDAY PLOTTING</div><h2>Arrays in. Lines out.</h2><p>Data is an object of arrays. The names are yours to choose: <code>inputs</code> and <code>outputs</code> pair up the columns to draw. Repeat an input for multiple series sharing the same x values.</p><div class="demo"><easy-canvas id="lines" aria-label="Drag to pan. Scroll to zoom. Hover near a line for its values." role="img"></easy-canvas><p class="caption">Drag to pan. Scroll to zoom. Hover near a line for its values.</p></div><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code>const xs = Array.from({ length: 161 }, (_, i) =&gt; i / 20);
+const data = {
+  xs,
+  sine: xs.map(Math.sin),
+  cosine: xs.map(Math.cos)
+};
+const plot = document.querySelector(&#x27;#lines&#x27;);
+plot.drawingLoop = () =&gt; {
+  plot.hotAndReady.linePlot(data, {
+    title: &#x27;A couple of waves&#x27;,
+    xLabel: &#x27;x&#x27;, yLabel: &#x27;Amplitude&#x27;,
+    inputs: [&#x27;xs&#x27;, &#x27;xs&#x27;],
+    outputs: [&#x27;sine&#x27;, &#x27;cosine&#x27;],
+    legendLabels: [&#x27;Sine&#x27;, &#x27;Cosine&#x27;],
+    colors: [&#x27;#2457dc&#x27;, &#x27;#df6846&#x27;],
+    tooltips: [&#x27;xs&#x27;, &#x27;sine&#x27;, &#x27;cosine&#x27;]
+  });
+};</code></pre></div><p>For tooltips, use one shared input column with x values sorted in ascending order. All paired arrays should have matching lengths. Use at least two points and nonzero axis ranges.</p></section>
+<section id="bar-plots"><div class="section-number">03 / CATEGORIES</div><h2>A simple bar chart.</h2><p>Supply category names in <code>bars</code> and matching values in <code>heights</code>. Hover a bar to highlight it. This helper is best suited to nonnegative values with a positive maximum.</p><div class="demo"><easy-canvas id="bars" aria-label="Example data, not actual dessert sales. Controls are disabled on this demo." role="img"></easy-canvas><p class="caption">Example data, not actual dessert sales. Controls are disabled on this demo.</p></div><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code>const plot = document.querySelector(&#x27;#bars&#x27;);
+const data = {
+  bars: [&#x27;Cake&#x27;, &#x27;Pie&#x27;, &#x27;Donuts&#x27;, &#x27;Cookies&#x27;],
+  heights: [12, 8, 19, 15]
+};
+plot.drawingLoop = () =&gt; {
+  plot.hotAndReady.barPlot(data, {
+    title: &#x27;An entirely made-up bake sale&#x27;,
+    xLabel: &#x27;Dessert&#x27;, yLabel: &#x27;Sold&#x27;,
+    legendLabels: data.bars,
+    colors: [&#x27;#2457dc&#x27;, &#x27;#df6846&#x27;, &#x27;#43a18b&#x27;, &#x27;#9273b9&#x27;]
+  });
+};</code></pre></div><p>Bar plots autoscale on every draw by default. Set <code>autoScale: false</code> to use your own bounds. Set the element’s <code>controls="false"</code> explicitly when you want a static chart.</p></section>
+<section id="linked"><div class="section-number">04 / A SHARED VIEW</div><h2>Two plots. One x axis.</h2><p>Pass the same object to <code>linkInfo</code> and tell each plot which bounds to share. The plot under the pointer publishes its bounds; the others follow.</p><div class="demo linked"><easy-canvas id="linked-sine" role="img" aria-label="Linked sine plot"></easy-canvas><easy-canvas id="linked-cosine" role="img" aria-label="Linked cosine plot"></easy-canvas><p class="caption">Pan or zoom either plot. Their x ranges move together.</p></div><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code>const link = {};
+const xs = Array.from({ length: 161 }, (_, i) =&gt; i / 20);
+for (const [id, fn, title] of [
+  [&#x27;linked-sine&#x27;, Math.sin, &#x27;Sine&#x27;],
+  [&#x27;linked-cosine&#x27;, Math.cos, &#x27;Cosine&#x27;]
+]) {
+  const plot = document.getElementById(id);
+  plot.linkInfo([&#x27;xmin&#x27;, &#x27;xmax&#x27;], link);
+  const data = { xs, ys: xs.map(fn) };
+  plot.drawingLoop = () =&gt; {
+    plot.hotAndReady.linePlot(data, {
+      title, xLabel: &#x27;Shared x&#x27;, yLabel: &#x27;Value&#x27;,
+      colors: [&#x27;#2457dc&#x27;]
+    });
+  };
+}</code></pre></div><p>Add <code>'ymin'</code> and <code>'ymax'</code> to link both axes. Each canvas gets one link object and one list of keys; calling <code>linkInfo</code> again replaces them.</p></section>
+<section id="custom-drawing"><div class="section-number">05 / GO OFF SCRIPT</div><h2>Still your canvas.</h2><p><code>plot.ctx</code> is the real 2D context. Helpers such as <code>arc</code>, <code>rect</code> and <code>drawLine</code> take data coordinates; the native context takes canvas pixels. Use <code>scaleX</code> and <code>scaleY</code> to move between the two.</p><div class="demo"><easy-canvas id="custom" aria-label="Move over the circle. Hit testing uses your data coordinates." role="img"></easy-canvas><p class="caption">Move over the circle. Hit testing uses your data coordinates.</p></div><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code>const plot = document.querySelector(&#x27;#custom&#x27;);
+plot.setAttribute(&#x27;xmin&#x27;, &#x27;-2&#x27;);
+plot.setAttribute(&#x27;xmax&#x27;, &#x27;2&#x27;);
+plot.setAttribute(&#x27;ymin&#x27;, &#x27;-1.5&#x27;);
+plot.setAttribute(&#x27;ymax&#x27;, &#x27;1.5&#x27;);
+plot.drawingLoop = () =&gt; {
+  plot.ctx.strokeStyle = &#x27;#2457dc&#x27;;
+  plot.ctx.fillStyle = plot.mouseInCircle(0, 0, 0.6)
+    ? &#x27;#df6846&#x27; : &#x27;#dce5ff&#x27;;
+  plot.ctx.beginPath();
+  plot.arc(0, 0, 0.6, 0, 2 * Math.PI, true);
+  plot.ctx.closePath();
+  plot.ctx.fill();
+  plot.ctx.stroke();
+};</code></pre></div><p><code>arc</code> and <code>rect</code> add to the current path. Call <code>ctx.beginPath()</code> first, then fill or stroke it yourself. Circles stretch if your x and y scales have different pixel sizes. <code>drawLabel</code> takes canvas pixel coordinates.</p></section>
+<section id="animation-updates"><div class="section-number">06 / KEEP IT MOVING</div><h2>Draw once. Or every frame.</h2><p>EasyCanvas clears the canvas and calls <code>drawingLoop</code> automatically, targeting 30 frames per second by default. Use elapsed time for animation so speed is independent of frame rate.</p><button id="toggle-animation" type="button" class="small-button" aria-pressed="false">Pause animation</button><div class="demo"><easy-canvas id="animation" aria-label="A moving wave drawn with the low-level line helper." role="img"></easy-canvas><p class="caption">A moving wave drawn with the low-level line helper.</p></div><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code>const plot = document.querySelector(&#x27;#animation&#x27;);
+plot.setAttribute(&#x27;xmin&#x27;, &#x27;0&#x27;);
+plot.setAttribute(&#x27;xmax&#x27;, &#x27;8&#x27;);
+plot.setAttribute(&#x27;ymin&#x27;, &#x27;-1.5&#x27;);
+plot.setAttribute(&#x27;ymax&#x27;, &#x27;1.5&#x27;);
+plot.setAttribute(&#x27;framerate&#x27;, &#x27;30&#x27;);
+const xs = Array.from({ length: 161 }, (_, i) =&gt; i / 20);
+plot.drawingLoop = () =&gt; {
+  const t = performance.now() / 1000;
+  plot.ctx.strokeStyle = &#x27;#2457dc&#x27;;
+  plot.drawLine({ xs, ys: xs.map(x =&gt; Math.sin(x - t)) });
+};</code></pre></div><p>For changing data, mutate the arrays your drawing loop reads, or replace the data variable. A line plot autoscales on its first draw only, so your view survives panning and zooming.</p><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code>// The drawing loop reads the same object every frame.
+data.ys.push(7);
+data.xs.push(5);
 
-        summary > h2 {
-            display: inline-block
-        }
+// Line plots autoscale once, preserving subsequent zoom/pan.
+// Explicitly request fresh bounds when your data needs them:
+plot.alreadyAutoScaledLinePlot = false;
+plot.renderPlot();</code></pre></div><p><code>framerate="0"</code> stops regular animation after the initial frame; it is not a full pause switch. Resizing, the DPI timer, pointer interactions and explicit <code>renderPlot()</code> calls can still redraw. Keep drawing functions free of unintended side effects.</p></section>
+<section id="time-axes"><div class="section-number">07 / OVER TIME</div><h2>Dates are numbers too.</h2><p>Use Unix timestamps in milliseconds and set <code>xAxisIsTime: true</code> (or <code>yAxisIsTime</code>). Labels adapt to the visible time span and use the browser’s local timezone.</p><div class="demo"><easy-canvas id="dates" aria-label="A week of illustrative data." role="img"></easy-canvas><p class="caption">A week of illustrative data.</p></div><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code>const plot = document.querySelector(&#x27;#dates&#x27;);
+const start = Date.UTC(2026, 0, 1);
+const data = {
+  xs: Array.from({ length: 7 }, (_, i) =&gt; start + i * 86400000),
+  ys: [4, 6, 5, 9, 8, 12, 10]
+};
+plot.drawingLoop = () =&gt; {
+  plot.hotAndReady.linePlot(data, {
+    title: &#x27;One week of example data&#x27;,
+    xLabel: &#x27;Date&#x27;, yLabel: &#x27;Value&#x27;,
+    xAxisIsTime: true, xTicks: 4,
+    colors: [&#x27;#2457dc&#x27;]
+  });
+};</code></pre></div></section>
+<section id="typescript"><div class="section-number">08 / A LITTLE TYPE HELP</div><h2>The same API, with types.</h2><p>Download <a href="easyCanvas.d.ts"><code>easyCanvas.d.ts</code></a> beside your application source. It describes the existing browser API and adds <code>easy-canvas</code> to TypeScript’s element map. Use type-only imports; the browser bundle still provides the runtime.</p><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code>import type { EasyCanvasElement, LinePlotSettings }
+  from &#x27;./easyCanvas&#x27;; // easyCanvas.d.ts, downloaded beside this file
 
-        details:focus, summary:focus{
-            outline:none;
-        }
+// Load easyCanvas.bundle.js once in your HTML, before this app.
+const plot = document.createElement(&#x27;easy-canvas&#x27;);
+plot.style.cssText = &#x27;display:block; height:360px&#x27;;
+document.body.appendChild(plot);
 
-        summary{
-            cursor:pointer;
-            user-select: none;
-        }
+const settings: LinePlotSettings = {
+  title: &#x27;From TypeScript&#x27;, inputs: [&#x27;x&#x27;], outputs: [&#x27;y&#x27;]
+};
+plot.drawingLoop = () =&gt; {
+  plot.hotAndReady.linePlot({ x: [0, 1, 2], y: [2, 1, 4] }, settings);
+};
 
-        #example1Div {
-            width:500px;
-            height:500px;
-            margin:auto;
-        }
-    </style>
-
-    <!-- Syntax Highlighting for code examples -->
-    <link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.2.0/styles/atom-one-dark.min.css">
-    <script src="https://unpkg.com/@highlightjs/cdn-assets@11.2.0/highlight.min.js"></script>
-    <!-- <script src="https://unpkg.com/@highlightjs/cdn-assets@11.2.0/languages/go.min.js"></script> -->
-</head>
-
-<body>
-    <script src="./easyCanvas.bundle.js"></script>
-
-    <h1>Easy Canvas Examples</h1>
-    <hr>
-
-
-    <details open>
-        <summary><h2>Example 1: Simple Line Plot</h2></summary>
-            
-        <h3>HTML:</h3>
-        <pre class="example1"><code class="language-html"></code></pre>
-
-        <h3>JavaScript:</h3>
-        <pre class="example1"><code class="language-javascript"></code></pre>
-
-        <h3>Rendered Result:</h3>
-        <div id="example1Div">
-            <easy-canvas id="example1" framerate="1.0" xmin="0" xpadding="15" ypadding="10" xmax="6.28" ymin="-1" ymax="1" default-axes-on="false" fontsize="25"></easy-canvas>
-        </div>
-        <script class="example1">
-            function range(a, b, delta = 0.01) {
-                let l = [];
-                for (let i = a; i < b; i += delta) {
-                    l.push(i);
-                }
-                return l;
-            }
-
-            const data1 = {
-                xs: range(0, 2 * Math.PI), // arbitrary name
-                sine: range(0, 2 * Math.PI).map(v => Math.sin(v)), // arbitrary name
-                cosine: range(0, 2 * Math.PI).map(v => Math.cos(v)) // arbitrary name
-            }
-
-            const settings1 = {
-                title: "Sine and Cosine",
-                xLabel: "xs",
-                yLabel: "sine and cosine",
-                inputs: ["xs", "xs"],
-                outputs: ["sine", "cosine"],
-                legendLabels: ["Sine", "Cosine"],
-                tooltips: ["sine", "cosine"]
-            }
-
-            // ec1 because this is the first example canvas
-            const ec1 = document.getElementById("example1");
-            ec1.debug = true;
-            ec1.drawingLoop = function () {
-                this.hotAndReady.linePlot(data1, settings1);
-            }.bind(ec1);
-        </script>
-    </details>
-
-
-
-
-
-
-    <!-- Example 2 -->
-    <details hidden>
-        <summary><h2>Example 2: Electric Boogaloo</h2></summary>
-
-        <h3>HTML:</h3>
-        <pre class="example1"><code class="language-html"></code></pre>
-
-        <h3>JavaScript:</h3>
-        <pre class="example1"><code class="language-javascript"></code></pre>
-
-        <easy-canvas id="example2"></easy-canvas>
-        <script class="example2"></script>
-
-    </details>
-
-    <!-- Example 3 -->
-    <details hidden>
-        <summary><h2>Example 3: Electric Boogaloo</h2></summary>
-
-        <h3>HTML:</h3>
-        <pre class="example1"><code class="language-html"></code></pre>
-
-        <h3>JavaScript:</h3>
-        <pre class="example1"><code class="language-javascript"></code></pre>
-
-        <easy-canvas id="example2"></easy-canvas>
-        <script class="example2"></script>
-
-    </details>
-
-
-
-
-
-
-
-
-
-
-    <!-- Make example code visible for visitors. -->
-    <script>
-        function escapeHTML(text) {
-            var map = {
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#039;'
-            };
-            text = text.replace(/[&<>"']/g, function (m) { return map[m]; });
-            let lines = text.split("\n");
-            let minSpaces = Infinity;
-            for(let l of lines){
-                if(l.trimLeft().length > 0){
-                    minSpaces = Math.min(minSpaces, l.length - l.trimLeft().length);
-                }
-            }
-            return lines.map(l => l.substr(minSpaces)).join("\n");
-        }
-
-        function renderCode(n) {
-            let html = document.querySelector(`pre.example${n} > code.language-html`);
-            let js = document.querySelector(`pre.example${n} > code.language-javascript`);
-
-            let ec = document.querySelector(`easy-canvas#example${n}`);
-            let script = document.querySelector(`script.example${n}`);
-
-            html.innerHTML = escapeHTML(ec.outerHTML);
-            js.innerHTML = escapeHTML(script.innerHTML);
-        }
-
-
-        for(let i=0; i<100; i++){
-            try{
-                renderCode(i);
-            }
-            catch(e){};
-        }
-
-        hljs.highlightAll();
-
-    </script>
-
-</body>
-
-</html>
+// Existing elements can be checked and typed too:
+const existing = document.querySelector&lt;EasyCanvasElement&gt;(&#x27;#my-plot&#x27;);</code></pre></div><p>This declaration file works with the stable JavaScript bundle documented here. The original <a href="https://github.com/jackeown/EasyCanvas/tree/typescript">TypeScript implementation</a> and its example remain on the <code>typescript</code> branch; it has some different behavior and is not silently substituted for the stable version.</p></section>
+<section id="reference"><div class="section-number">09 / THE DETAILS</div><h2>API reference.</h2><h3>Element attributes</h3><p>Set numeric values with <code>setAttribute(name, String(value))</code>. Boolean attributes use the strings <code>"true"</code> and <code>"false"</code>, rather than HTML’s presence/absence convention.</p><div class="table-scroll"><table><thead><tr><th>Attribute</th><th>Default</th><th>Meaning</th></tr></thead><tbody><tr><td><code>xmin, xmax</code></td><td>−100, 100</td><td>Horizontal bounds in data units.</td></tr><tr><td><code>ymin, ymax</code></td><td>−100, 100</td><td>Vertical bounds in data units.</td></tr><tr><td><code>xpadding, ypadding</code></td><td>10, 16</td><td>Padding at each edge, as a percentage of canvas width/height.</td></tr><tr><td><code>framerate</code></td><td>30</td><td>Target drawing frequency, not a guaranteed rate.</td></tr><tr><td><code>fontsize</code></td><td>25</td><td>Font size in canvas pixels for plot labels.</td></tr><tr><td><code>default-axes-on</code></td><td>true</td><td>Draw default axes after your drawing function; plot helpers manage their own axes.</td></tr><tr><td><code>controls</code></td><td>Enabled</td><td>String true/false attaches/removes mouse pan and wheel zoom listeners. Touch handling remains separate.</td></tr></tbody></table></div><h3><code>hotAndReady.linePlot(data, settings)</code></h3><p>Pass a settings object, even if empty. Data maps column names to numeric arrays.</p><div class="table-scroll"><table><thead><tr><th>Setting</th><th>Default / behavior</th></tr></thead><tbody><tr><td><code>inputs / outputs</code></td><td>["xs"] / ["ys"]. One input name per output name.</td></tr><tr><td><code>title / xLabel / yLabel</code></td><td>"Untitled" / "x" / "y".</td></tr><tr><td><code>legendLabels</code></td><td>["y"]. Supply one label per series; an empty string hides that entry.</td></tr><tr><td><code>colors</code></td><td>Red, green, orange, blue, purple, yellow; cycles through the array.</td></tr><tr><td><code>lineWidth</code></td><td>2 canvas pixels.</td></tr><tr><td><code>tooltips</code></td><td>[]; column names to show near a hovered point.</td></tr><tr><td><code>autoScale</code></td><td>true; first draw only. Reset <code>alreadyAutoScaledLinePlot</code> to request it again.</td></tr><tr><td><code>xmin, xmax, ymin, ymax</code></td><td>Override the initial automatic extent. Ignored when autoScale is false.</td></tr><tr><td><code>xTicks / yTicks</code></td><td>Canvas width / 120 and height / 80, rounded down. Supply positive counts for very small plots.</td></tr><tr><td><code>xAxisIsTime / yAxisIsTime</code></td><td>false; format millisecond timestamps as dates/times.</td></tr></tbody></table></div><h3><code>hotAndReady.barPlot(data, settings)</code></h3><p>Data is <code>{ bars: string[], heights: number[] }</code>. Settings: <code>title</code>, <code>xLabel</code>, <code>yLabel</code>, <code>legendLabels</code>, <code>colors</code> and <code>autoScale</code>. Their defaults match line plots except that bars autoscale every draw. The stable helper uses its built-in bar width and tick layout.</p><h3>Drawing & interaction</h3><div class="table-scroll"><table><thead><tr><th>Member</th><th>What it does</th></tr></thead><tbody><tr><td><code>drawingLoop</code></td><td>Your callback. Use an arrow closure over the plot, or a regular function bound with <code>.bind(plot)</code>.</td></tr><tr><td><code>ctx / canvas / shadow</code></td><td>The 2D context, underlying canvas, and open shadow root.</td></tr><tr><td><code>renderPlot()</code></td><td>Refresh bounds/scales, clear, draw, and synchronize linked values once.</td></tr><tr><td><code>fixDPI()</code></td><td>Check CSS dimensions, update canvas resolution if needed, and redraw. The existing implementation uses <code>dpr = 2</code> by default.</td></tr><tr><td><code>scaleX(x), scaleY(y)</code></td><td>Data coordinate → canvas pixel coordinate.</td></tr><tr><td><code>scaleXInverse(x), scaleYInverse(y)</code></td><td>Canvas pixel coordinate → data coordinate.</td></tr><tr><td><code>updateScales()</code></td><td>Recompute the mappings; useful after directly assigning numeric bounds.</td></tr><tr><td><code>drawLine({xs, ys}, lineWidth = 2)</code></td><td>Stroke a polyline in data coordinates, keeping the previous line width.</td></tr><tr><td><code>arc(cx, cy, r, start, end, counterclockwise = false)</code></td><td>Append a sampled arc in data coordinates; angles in radians. The full-circle example passes true explicitly.</td></tr><tr><td><code>rect(x, y, width, height)</code></td><td>Append a rectangular path in data coordinates.</td></tr><tr><td><code>mouseInCircle(cx, cy, r)</code></td><td>Test the pointer in data units; false when outside the canvas.</td></tr><tr><td><code>mouseInRect(x1, y1, x2, y2)</code></td><td>Test the pointer against two opposite corners, inclusively.</td></tr><tr><td><code>mouseX / mouseY / mouseDown</code></td><td>Current pointer position in data units, or undefined outside; left button state.</td></tr><tr><td><code>drawLabel(settings)</code></td><td>Pixel x/y and text; optional theta (radians), font, textAlign, textBaseline. Theta rotates counterclockwise.</td></tr><tr><td><code>drawDefaultAxes(settings = {})</code></td><td>Draw axes with optional xTicks, yTicks, xAxisIsTime, yAxisIsTime.</td></tr><tr><td><code>drawAxis(settings)</code></td><td>Custom axis: data x1/y1/x2/y2, labelXOffset/labelYOffset in data units, labelTheta in radians, nTicks, and either labels or scaleStart/scaleEnd. Optional isDatetime.</td></tr><tr><td><code>linkInfo(keys, object)</code></td><td>Share named element values through one common object.</td></tr><tr><td><code>hotAndReady.drawTooltip(x, y, info)</code></td><td>Draw key/value entries near a data coordinate.</td></tr><tr><td><code>hotAndReady.histogram(data)</code></td><td>Historical placeholder. Disables default axes but does not bin or draw data.</td></tr><tr><td><code>debug</code></td><td>Defaults to true; set false to silence attribute-change logging.</td></tr></tbody></table></div><h3>Mouse & touch</h3><p>Drag to pan; scroll to zoom around the pointer. Scroll below the x axis to zoom x alone, or left of the y axis to zoom y alone. Two-finger touch gestures pan and zoom, with axis-specific behavior in the margins. These are the original controls, including their existing quirks.</p></section>
+<section id="notes"><div class="section-number">10 / UNDER THE HOOD</div><h2>A small wrapper, on purpose.</h2><p>EasyCanvas was made to keep plotting simple while leaving the underlying canvas available. It uses browser custom elements, a shadow-root canvas, and an automatic drawing loop. There is no framework or runtime package dependency. The library requests the Lato font from Google Fonts; drawing still works if that font is unavailable.</p><h3>Where the source lives</h3><p>The stable CommonJS source is <code>easyCanvas.js</code>, <code>easyCanvasHotAndReady.js</code>, and <code>helpers.js</code>. <code>easyCanvas.bundle.js</code> is the browser-ready build used by the original blog posts. This documentation keeps those files unchanged. The <a href="https://github.com/jackeown/EasyCanvas/tree/typescript">typescript</a> and <a href="https://github.com/jackeown/EasyCanvas/tree/masks">masks</a> branches retain the later experiments.</p><h3>Run locally</h3><pre><code>git clone https://github.com/jackeown/EasyCanvas.git
+cd EasyCanvas
+python3 -m http.server 8766
+# Open http://localhost:8766</code></pre><p>No install or build is needed to read the docs or use the bundle. For library development, <code>npm ci</code> installs the build/typecheck tools; <code>npm run build</code> rebuilds the browser bundle and <code>npm test</code> checks the declarations and documentation. Review any rebuilt bundle before committing it.</p><h3>Things to know</h3><ul><li>Use a visible element with a nonzero size. A block display and explicit height are the easiest setup.</li><li>Line autoscaling needs finite numeric data and nonzero ranges. For a flat series, provide distinct ymin/ymax overrides.</li><li>The existing implementation installs timers and animation callbacks per element without a teardown API. Prefer reusing a plot over repeatedly creating and removing elements.</li><li>Load the bundle only once per page. Custom elements cannot be registered twice.</li><li>The stable bundle is a classic script, not an ES module export. The declarations describe its DOM API; they do not add a runtime import.</li><li>Histogram rendering is unfinished. It is documented as a placeholder rather than presented as a working chart type.</li></ul><p>See the <a href="examples/original.html">original example page</a>, the <a href="https://jackeown.github.io/2019/06/01/easyCanvas.html">original introduction</a>, or <a href="https://github.com/jackeown/EasyCanvas">browse the source</a>.</p></section>
+<footer>easyCanvas · A small plotting library by Jack McKeown.<br><a href="#start">Back to the first plot ↑</a></footer>
+</main></div></body></html>

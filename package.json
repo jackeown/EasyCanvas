@@ -1,0 +1,17 @@
+{
+  "name": "easycanvas-source",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Original EasyCanvas source, documentation, and browser build tooling",
+  "scripts": {
+    "build": "browserify easyCanvas.js -o easyCanvas.bundle.js",
+    "test": "node tests/docs.cjs && node tests/examples.cjs && tsc --noEmit --strict --lib ES2020,DOM --moduleResolution node tests/types.ts"
+  },
+  "devDependencies": {
+    "browserify": "17.0.1",
+    "typescript": "5.9.3"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

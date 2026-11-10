@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>My first EasyCanvas plot</title>
+<script src="https://jackeown.github.io/EasyCanvas/easyCanvas.bundle.js"></script>
+<body>
+<script>
+const plot = document.createElement('easy-canvas');
+plot.style.cssText = 'display:block; width:100%; height:360px';
+document.body.appendChild(plot);
+
+const data = { xs: [0, 1, 2, 3, 4], ys: [1, 3, 2, 5, 4] };
+plot.drawingLoop = () => {
+  plot.hotAndReady.linePlot(data, {
+    title: 'My first plot',
+    xLabel: 'Time', yLabel: 'Value'
+  });
+};
+</script>
+</body>
+</html>

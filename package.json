@@ -6,7 +6,7 @@
   "scripts": {
     "build": "browserify easyCanvas.js -o easyCanvas.bundle.js",
     "test": "node tests/docs.cjs && node tests/examples.cjs && tsc --noEmit --strict --lib ES2020,DOM --moduleResolution node tests/types.ts",
-    "docs:highlight": "node scripts/highlight.cjs"
+    "docs:highlight": "node scripts/highlight.cjs && node scripts/build-custom-examples.cjs"
   },
   "devDependencies": {
     "browserify": "17.0.1",

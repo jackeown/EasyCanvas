@@ -39,7 +39,7 @@ assert.ok(html.includes('James McKeown'), 'Developer credit is present');
 console.log('PASS: every code block highlighted; complete copyable examples preserved.');
 
 new vm.Script(fs.readFileSync(path.join(root, 'docs/gallery.js'), 'utf8'));
-assert.equal((home.match(/class="gallery-title"/g) || []).length, 5);
+assert.equal((home.match(/class="gallery-title"/g) || []).length, 9);
 assert.ok(!home.includes('id="start"'), 'No repeated guide below the gallery');
 assert.ok(!home.includes('docs/site.js'), 'Homepage does not initialize duplicate guide plots');
 assert.ok(!html.includes('docs/gallery.js'), 'Guide does not initialize homepage plots');
@@ -62,3 +62,13 @@ for (const [filename, page] of [['index.html', home], ['guide.html', html]]) {
   }
 }
 console.log('PASS: separate homepage/guide assets and cross-page links.');
+
+assert.ok(home.includes('id="classic-graphs"') && home.includes('id="custom-examples"'));
+const custom = JSON.parse(fs.readFileSync(path.join(root, 'docs/custom-examples.json')));
+const generated = fs.readFileSync(path.join(root, 'docs/custom-examples.js'), 'utf8');
+new vm.Script(generated);
+for (const [id, example] of Object.entries(custom)) {
+  assert.ok(generated.includes(example.code), id + ': shown source is executable source');
+  assert.ok(home.includes('id="gallery-' + id + '"'), id + ': gallery element exists');
+}
+console.log('PASS: custom gallery code and modal source share one definition.');

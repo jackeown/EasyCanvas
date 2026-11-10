@@ -8,12 +8,14 @@ const root = path.resolve(__dirname, '..');
 const registry = new Map();
 const elements = new Map();
 let strokes = 0;
-const coordinateMethods = new Set(['moveTo', 'lineTo', 'translate', 'rotate', 'clearRect', 'rect']);
+let fills = 0;
+const coordinateMethods = new Set(['moveTo', 'lineTo', 'translate', 'rotate', 'clearRect', 'rect', 'fillRect', 'arc']);
 const ctx = new Proxy({}, {
   get(target, key) {
     if (!(key in target)) target[key] = (...args) => {
       if (coordinateMethods.has(key)) for (const n of args) assert.ok(Number.isFinite(n), `${key}: finite coordinate, got ${n}`);
       if (key === 'stroke') strokes++;
+      if (key === 'fill' || key === 'fillRect') fills++;
     };
     return target[key];
   }
@@ -88,3 +90,21 @@ for (const [id, plot] of elements) {
   assert.ok(strokes > before, `${id}: gallery draws visible finite paths`);
 }
 console.log('PASS: all five gallery charts draw with the original browser bundle.');
+
+const customExamples = JSON.parse(fs.readFileSync(path.join(root, 'docs/custom-examples.json')));
+for (const [id, example] of Object.entries(customExamples)) {
+  const plot = document.createElement('easy-canvas');
+  plot.debug = false;
+  elements.set('gallery-' + id, plot);
+  vm.runInContext('{' + example.code + '}', sandbox);
+  const before = strokes + fills;
+  plot.fixDPI(); plot.renderPlot();
+  assert.ok(strokes + fills > before, id + ': draws finite custom paths');
+  plot.mouseX = 0.5; plot.mouseY = 0.2;
+  plot.renderPlot();
+  sandbox.matchMedia = () => ({matches: true});
+  vm.runInContext('{' + example.code + '}', sandbox);
+  plot.renderPlot();
+  sandbox.matchMedia = () => ({matches: false});
+}
+console.log('PASS: four custom experiments draw finite paths and handle pointer/reduced-motion inputs.');

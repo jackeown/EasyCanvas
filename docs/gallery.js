@@ -3,7 +3,7 @@ const galleryDescriptions = {
   "lines": "Pair named data columns with inputs and outputs. This example draws sine and cosine from the same x values. Drag to pan, scroll to zoom, and hover near a line to inspect its values. Tooltips require ascending x values and a shared input column.",
   "bars": "Give barPlot matching bars and heights arrays. The helper draws category labels, colors and a legend; hovering a bar highlights it. This example uses made-up nonnegative values and disables mouse controls so the category layout stays fixed.",
   "custom": "The context is still yours. arc uses data coordinates and mouseInCircle tests the pointer in those same coordinates. Hover the shape to change its fill. save and restore keep its colors separate from the axes and tick labels. Unequal x/y pixel scales make the circle appear elliptical.",
-  "animation": "EasyCanvas clears the canvas and runs drawingLoop automatically. This example computes the wave from elapsed time, then draws it with drawLine. save and restore keep the wave blue and the axes neutral. Reduced-motion preferences show a still frame; the documentation below has a pause control.",
+  "animation": "EasyCanvas clears the canvas and runs drawingLoop automatically. This example computes the wave from elapsed time, then draws it with drawLine. save and restore keep the wave blue and the axes neutral. Reduced-motion preferences show a still frame; the animation guide has a pause control.",
   "dates": "Store dates as Unix timestamps in milliseconds and set xAxisIsTime to true. EasyCanvas formats the ticks for the visible time range in the browser\u2019s local timezone. These seven values are illustrative data, not a real measurement."
 };
 for (const plot of document.querySelectorAll('.gallery easy-canvas')) {
@@ -128,11 +128,18 @@ for (const button of document.querySelectorAll('.gallery-title')) {
     const id = button.dataset.example;
     const request = ++openedExample;
     document.querySelector('#example-title').textContent = button.textContent.replace(' ↗', '');
-    document.querySelector('#example-description').textContent = galleryDescriptions[id];
+    document.querySelector('#example-description').textContent = galleryDescriptions[id] || customExampleInfo[id].description;
     document.querySelector('#example-element').textContent = '<easy-canvas id="gallery-' + id + '"' + (id === 'bars' ? ' controls="false"' : '') + ' style="display:block; width:100%; height:300px"></easy-canvas>';
     document.querySelector('#example-guide').href = 'guide.html#' + button.dataset.section;
     exampleCode.textContent = 'Loading code…';
     exampleDialog.showModal();
+    if (typeof customExampleInfo !== 'undefined' && customExampleInfo[id]) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'code-wrap';
+      wrapper.innerHTML = customExampleInfo[id].html;
+      exampleCode.replaceChildren(wrapper);
+      return;
+    }
     try {
       const guide = await loadGuide();
       if (request !== openedExample || !exampleDialog.open) return;

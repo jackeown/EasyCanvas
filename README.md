@@ -87,3 +87,5 @@ npm run build # rebuild the browser bundle with Browserify
 The build is deliberately separate from documentation work. Review the bundle diff before committing a rebuild. The committed bundle remains usable without any tooling.
 
 GitHub Pages serves the root of `master`; `.nojekyll` keeps these static files as-is.
+
+Vercel is not needed. `vercel.json` disables automatic deployments from the old Vercel Git integration. The docs, examples, and downloadable bundle are hosted entirely on GitHub Pages.

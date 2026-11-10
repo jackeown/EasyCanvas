@@ -5,10 +5,12 @@
   "description": "Original EasyCanvas source, documentation, and browser build tooling",
   "scripts": {
     "build": "browserify easyCanvas.js -o easyCanvas.bundle.js",
-    "test": "node tests/docs.cjs && node tests/examples.cjs && tsc --noEmit --strict --lib ES2020,DOM --moduleResolution node tests/types.ts"
+    "test": "node tests/docs.cjs && node tests/examples.cjs && tsc --noEmit --strict --lib ES2020,DOM --moduleResolution node tests/types.ts",
+    "docs:highlight": "node scripts/highlight.cjs"
   },
   "devDependencies": {
     "browserify": "17.0.1",
+    "prismjs": "1.30.0",
     "typescript": "5.9.3"
   },
   "engines": {

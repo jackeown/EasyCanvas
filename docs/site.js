@@ -154,3 +154,22 @@ const observer = new IntersectionObserver(entries => {
   }
 }, {rootMargin: '-10% 0px -65% 0px'});
 for (const section of document.querySelectorAll('main section')) observer.observe(section);
+
+// Keep the complete example available; emphasis never changes copied source.
+for (const wrapper of document.querySelectorAll('.code-wrap')) {
+  if (!wrapper.querySelector('.code-context')) continue;
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.className = 'setup-toggle';
+  toggle.textContent = 'Show setup';
+  toggle.setAttribute('aria-pressed', 'false');
+  toggle.setAttribute('aria-label', 'Show setup code at full contrast');
+  toggle.addEventListener('click', () => {
+    const show = toggle.getAttribute('aria-pressed') !== 'true';
+    wrapper.dataset.showSetup = String(show);
+    toggle.setAttribute('aria-pressed', String(show));
+    toggle.textContent = show ? 'Dim setup' : 'Show setup';
+    toggle.setAttribute('aria-label', show ? 'Dim setup code' : 'Show setup code at full contrast');
+  });
+  wrapper.prepend(toggle);
+}

@@ -1,7 +1,7 @@
 // Pre-rendered highlighting: the published docs need no highlighter or CDN at runtime.
 const fs = require('node:fs');
 const path = require('node:path');
-const {decode, highlightCode} = require('./code-format.cjs');
+const {decode, highlightCode, highlightInline} = require('./code-format.cjs');
 const root = path.resolve(__dirname, '..');
 const configs = [
   { language: 'html', muted: [[1, 10], [19, 21]] },
@@ -24,4 +24,8 @@ let html = fs.readFileSync(file, 'utf8').replace(/<pre(?:\s[^>]*)?><code(?:\s[^>
   return highlightCode(source, config.language, config.muted);
 });
 if (index !== configs.length) throw new Error('Code block count changed; update highlighting metadata');
+html = html.replace(/<strong>((?:[a-z]\w*\([^<]*\)|hotAndReady|pieChart \/ donutChart|scatterPlot \/ bubblePlot))<\/strong>/g,
+  '<strong><code>$1</code></strong>');
+html = html.replace(/(<pre\b[^>]*>[\s\S]*?<\/pre>)|<code(?:\s[^>]*)?>([\s\S]*?)<\/code>/g,
+  (match, block, content) => block || highlightInline(decode(content)));
 fs.writeFileSync(file, html);

@@ -6,6 +6,7 @@
   <title>EasyCanvas Playground</title>
   <link rel="stylesheet" href="docs/style.css">
   <script src="docs/theme.js"></script>
+  <script src="docs/editor-highlight.js" defer></script>
   <script src="docs/playground.js" defer></script>
 </head>
 <body>
@@ -32,7 +33,10 @@
           <option value="html">HTML</option>
           <option value="css">CSS</option>
         </select>
-        <textarea id="editor" aria-label="JavaScript source" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+        <div class="editor-surface">
+          <pre class="editor-highlight" aria-hidden="true"><code></code></pre>
+          <textarea id="editor" aria-label="JavaScript source" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off"></textarea>
+        </div>
       </div>
       <section class="playground-preview" aria-labelledby="preview-heading">
         <h2 id="preview-heading">Preview</h2>

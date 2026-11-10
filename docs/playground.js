@@ -62,6 +62,7 @@
         };
         description.textContent = example.description;
         editor.value = source[language.value];
+        editor.dispatchEvent(new Event('editor-source-change'));
         const url = new URL(location.href);
         url.searchParams.set('example', preset.value);
         history.replaceState(null, '', url);
@@ -78,6 +79,7 @@
     language.addEventListener('change', () => {
         if (!source) return;
         editor.value = source[language.value];
+        editor.dispatchEvent(new Event('editor-source-change'));
         editor.setAttribute('aria-label', language.selectedOptions[0].textContent + ' source');
     });
     editor.addEventListener('input', () => {

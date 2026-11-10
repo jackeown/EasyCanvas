@@ -135,3 +135,30 @@ html[data-theme="dark"] .time-controls label{color:#4b545a}
 @media(max-width:700px){.playground-panes{grid-template-columns:1fr}.playground-link{font-size:11px}}
 @media(max-width:650px){#classic-graphs .gallery-card{grid-column:span 1}}
 @media(max-width:650px){header{height:auto;min-height:64px;flex-wrap:wrap;padding:8px 6%;gap:6px 12px}header .header-guide{margin-left:auto}header:has(.header-guide)>a:last-of-type{font-size:11px}}
+
+/* Inline code uses a palette tuned for the surrounding document. */
+.inline-code{color:#285078}
+.inline-code .token:is(.api-name,.function,.class-name,.tag){color:#155791}
+.inline-code .token:is(.string,.attr-value){color:#376b28}
+.inline-code .token:is(.keyword,.number,.boolean){color:#74439b}
+.inline-code .token:is(.operator,.punctuation){color:#555e6d}
+.inline-code .token:is(.property,.attr-name,.builtin){color:#8b4b17}
+.inline-code .token.comment{color:#626a76}
+html[data-theme="dark"] .inline-code .token:is(.api-name,.function,.class-name,.tag){color:#a7d5fa}
+html[data-theme="dark"] .inline-code .token:is(.string,.attr-value){color:#b9dfaa}
+html[data-theme="dark"] .inline-code .token:is(.keyword,.number,.boolean){color:#e4baff}
+html[data-theme="dark"] .inline-code .token:is(.operator,.punctuation,.comment){color:#c5d1df}
+html[data-theme="dark"] .inline-code .token:is(.property,.attr-name,.builtin){color:#efcf95}
+.api-detail summary code{font:inherit;background:none;padding:0}
+
+/* The native textarea owns selection, keyboard input, and scroll. */
+.editor-surface{position:relative;margin-top:12px;border:1px solid var(--line);border-radius:4px;background:#202b38;overflow:hidden}
+.editor-surface .editor-highlight,.editor-surface textarea{box-sizing:border-box;margin:0;padding:14px;border:0;border-radius:0;font:13px/1.55 var(--mono);tab-size:2;letter-spacing:normal;white-space:pre;overflow-wrap:normal}
+.editor-surface .editor-highlight{position:absolute;inset:0 auto auto 0;display:none;overflow:hidden;pointer-events:none;color:#e2e9f2}
+.editor-surface .editor-highlight code{font:inherit;white-space:inherit;overflow-wrap:inherit}
+.editor-surface textarea{position:relative;display:block;width:100%;height:410px;min-height:220px;resize:vertical;overflow:auto}
+.editor-surface.is-highlighted .editor-highlight{display:block}
+.editor-surface.is-highlighted textarea{background:transparent;color:transparent;caret-color:#e2e9f2}
+.editor-surface.is-highlighted textarea::selection{background:#8bb0ff50;color:transparent}
+.editor-surface:focus-within{outline:2px solid var(--blue);outline-offset:2px}
+@media(forced-colors:active){.editor-surface.is-highlighted .editor-highlight{display:none}.editor-surface.is-highlighted textarea{color:CanvasText;caret-color:CanvasText;background:Canvas}}

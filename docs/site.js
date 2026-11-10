@@ -70,6 +70,7 @@ plot.setAttribute('xmax', '2');
 plot.setAttribute('ymin', '-1.5');
 plot.setAttribute('ymax', '1.5');
 plot.drawingLoop = () => {
+  plot.ctx.save();
   plot.ctx.strokeStyle = '#2457dc';
   plot.ctx.fillStyle = plot.mouseInCircle(0, 0, 0.6)
     ? '#df6846' : '#dce5ff';
@@ -78,6 +79,7 @@ plot.drawingLoop = () => {
   plot.ctx.closePath();
   plot.ctx.fill();
   plot.ctx.stroke();
+  plot.ctx.restore();
 };
 }
 

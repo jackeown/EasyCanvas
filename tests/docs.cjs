@@ -3,7 +3,8 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 const vm = require('node:vm');
 const root = path.resolve(__dirname, '..');
-const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+const html = fs.readFileSync(path.join(root, 'guide.html'), 'utf8');
+const home = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const site = fs.readFileSync(path.join(root, 'docs/site.js'), 'utf8');
 const snippets = JSON.parse(fs.readFileSync(path.join(root, 'docs/snippets.json')));
 const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(m => m[1]);
@@ -11,7 +12,7 @@ assert.equal(new Set(ids).size, ids.length, 'No duplicate DOM IDs');
 for (const [, href] of html.matchAll(/(?:href|src)="([^"]+)"/g)) {
   if (href.startsWith('#')) {
     if (href.length > 1) assert.ok(ids.includes(href.slice(1)), `Anchor ${href} resolves`);
-  } else if (!/^https?:/.test(href)) assert.ok(fs.existsSync(path.join(root, href)), `Asset ${href} exists`);
+  } else if (!/^https?:/.test(href)) assert.ok(fs.existsSync(path.join(root, href.split('#')[0])), `Asset ${href} exists`);
 }
 for (const key of ['line', 'bar', 'linked', 'custom', 'animation', 'dates']) {
   assert.ok(site.includes(snippets[key]), `${key}: displayed code is the executed code`);
@@ -38,8 +39,26 @@ assert.ok(html.includes('James McKeown'), 'Developer credit is present');
 console.log('PASS: every code block highlighted; complete copyable examples preserved.');
 
 new vm.Script(fs.readFileSync(path.join(root, 'docs/gallery.js'), 'utf8'));
-assert.equal((html.match(/class="gallery-title"/g) || []).length, 5);
-assert.ok(html.indexOf('id="gallery"') < html.indexOf('id="start"'), 'Gallery precedes long-form documentation');
-assert.match(html, /<dialog id="example-dialog" aria-labelledby="example-title"/);
+assert.equal((home.match(/class="gallery-title"/g) || []).length, 5);
+assert.ok(!home.includes('id="start"'), 'No repeated guide below the gallery');
+assert.ok(!home.includes('docs/site.js'), 'Homepage does not initialize duplicate guide plots');
+assert.ok(!html.includes('docs/gallery.js'), 'Guide does not initialize homepage plots');
+assert.match(home, /<dialog id="example-dialog" aria-labelledby="example-title"/);
 assert.match(html, /href="https:\/\/github.com\/mckeown12">James McKeown/);
 console.log('PASS: gallery navigation, modal accessibility, and linked developer credit.');
+
+for (const [filename, page] of [['index.html', home], ['guide.html', html]]) {
+  const pageIds = [...page.matchAll(/\bid="([^"]+)"/g)].map(m => m[1]);
+  assert.equal(new Set(pageIds).size, pageIds.length, filename + ': unique IDs');
+  for (const [, href] of page.matchAll(/(?:href|src)="([^"]+)"/g)) {
+    if (/^https?:/.test(href)) continue;
+    const [relative, hash] = href.split('#');
+    const target = relative ? path.join(root, relative === './' ? 'index.html' : relative) : path.join(root, filename);
+    assert.ok(fs.existsSync(target), filename + ': linked asset exists: ' + href);
+    if (hash) {
+      const targetHtml = fs.readFileSync(target, 'utf8');
+      assert.ok(targetHtml.includes('id="' + hash + '"'), filename + ': linked section exists: ' + href);
+    }
+  }
+}
+console.log('PASS: separate homepage/guide assets and cross-page links.');

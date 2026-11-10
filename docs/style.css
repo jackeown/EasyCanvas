@@ -54,3 +54,8 @@ body:has(dialog[open]){overflow:hidden}
 @media(max-width:650px){.landing{padding:0 6%}.landing .hero{display:block;padding:28px 0}.landing h1{font-size:38px;margin:12px 0 18px;max-width:440px}.landing .lead{font-size:14px;margin-bottom:12px}.landing .hero-meta{margin-top:16px}.gallery{padding:26px 0 30px}.gallery-heading{display:block}.gallery-heading p{margin-top:10px;max-width:none}.gallery-grid{grid-template-columns:1fr 1fr;gap:22px 14px}.gallery-card,.gallery-card:nth-child(n+4){grid-column:span 1}.gallery-card:last-child{grid-column:span 2}.gallery easy-canvas,.gallery-card:nth-child(n+4) easy-canvas{height:180px}.gallery-title{font-size:14px}.gallery-card figcaption p{font-size:11px}.gallery-chart{padding:3px}dialog{padding:20px}.modal-heading h2{font-size:23px}}
 @media(max-width:440px){.gallery-grid{grid-template-columns:1fr}.gallery-card:last-child{grid-column:span 1}.gallery easy-canvas,.gallery-card:nth-child(n+4) easy-canvas{height:210px}}
 @media(prefers-reduced-motion:reduce){.gallery-title span{transition:none}}
+.home-footer{max-width:1280px;margin:auto;padding:28px 5% 40px;border-top:1px solid var(--line)}
+.home-footer>p{font-size:12px;margin-top:16px}
+header .header-guide{margin-left:auto;font-size:13px}
+header:has(.header-guide)>a:last-child{margin-left:0}
+@media(max-width:650px){header:has(.header-guide){gap:14px}header .header-guide{font-size:11px}header:has(.header-guide)>a:last-child{font-size:10px}.home-footer{padding-left:6%;padding-right:6%}}

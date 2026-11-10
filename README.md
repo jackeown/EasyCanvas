@@ -92,4 +92,4 @@ Vercel is not needed. `vercel.json` disables automatic deployments from the old 
 
 Code highlighting is pre-rendered with Prism (MIT; see `docs/PRISM-LICENSE.txt`), so the site needs no runtime highlighting dependency. After editing a code block, run `npm run docs:highlight`. Setup lines are muted to 40% opacity; hover any muted line to brighten all setup lines in that block. Keyboard focus on the code block also restores full contrast.
 
-The homepage opens with five live chart examples. Click a chart title for its highlighted code and explanation; close the dialog with Escape, the close button, or the backdrop. The longer documentation follows the gallery.
+The homepage opens with five live chart examples. Click a chart title for its highlighted code and explanation; close the dialog with Escape, the close button, or the backdrop. The full documentation lives separately at `guide.html`, keeping the homepage focused on the gallery.

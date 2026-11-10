@@ -35,7 +35,7 @@ function renderLines(highlighted, muted) {
   }).join('\n');
 }
 let index = 0;
-const file = path.join(root, 'index.html');
+const file = path.join(root, 'guide.html');
 let html = fs.readFileSync(file, 'utf8').replace(/<pre(?:\s[^>]*)?><code(?:\s[^>]*)?>([\s\S]*?)<\/code><\/pre>/g, (_, content) => {
   const config = configs[index++];
   if (!config) throw new Error('Every code block needs explicit language and focus metadata');

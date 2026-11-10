@@ -109,26 +109,47 @@ plot.drawingLoop = () => {
 
 const exampleDialog = document.querySelector('#example-dialog');
 const exampleCode = document.querySelector('#example-code');
+let guideSource;
+let openedExample = 0;
+function loadGuide() {
+  if (!guideSource) {
+    guideSource = fetch('guide.html').then(response => {
+      if (!response.ok) throw new Error('Guide could not be loaded');
+      return response.text();
+    }).then(html => new DOMParser().parseFromString(html, 'text/html')).catch(error => {
+      guideSource = undefined;
+      throw error;
+    });
+  }
+  return guideSource;
+}
 for (const button of document.querySelectorAll('.gallery-title')) {
-  button.addEventListener('click', () => {
+  button.addEventListener('click', async () => {
     const id = button.dataset.example;
-    const source = document.querySelector('#' + button.dataset.section + ' .code-wrap');
-    const copy = source.cloneNode(true);
-    // Preserve the pre-rendered syntax highlighting while matching this chart's ID.
-    copy.innerHTML = copy.innerHTML.replaceAll('#' + id, '#gallery-' + id);
-    if (id === 'animation') {
-      // The gallery respects reduced motion; the guide shows the full animation.
-      const note = document.createElement('p');
-      note.className = 'caption';
-      note.textContent = 'The gallery holds a still frame when reduced motion is enabled.';
-      copy.appendChild(note);
-    }
+    const request = ++openedExample;
     document.querySelector('#example-title').textContent = button.textContent.replace(' ↗', '');
     document.querySelector('#example-description').textContent = galleryDescriptions[id];
     document.querySelector('#example-element').textContent = '<easy-canvas id="gallery-' + id + '"' + (id === 'bars' ? ' controls="false"' : '') + ' style="display:block; width:100%; height:300px"></easy-canvas>';
-    exampleCode.replaceChildren(copy);
-    document.querySelector('#example-guide').href = '#' + button.dataset.section;
+    document.querySelector('#example-guide').href = 'guide.html#' + button.dataset.section;
+    exampleCode.textContent = 'Loading code…';
     exampleDialog.showModal();
+    try {
+      const guide = await loadGuide();
+      if (request !== openedExample || !exampleDialog.open) return;
+      const source = guide.querySelector('#' + button.dataset.section + ' .code-wrap');
+      const copy = source.cloneNode(true);
+      // Reuse the guide's highlighted source, without repeating the guide on the homepage.
+      copy.innerHTML = copy.innerHTML.replaceAll('#' + id, '#gallery-' + id);
+      if (id === 'animation') {
+        const note = document.createElement('p');
+        note.className = 'caption';
+        note.textContent = 'The gallery holds a still frame when reduced motion is enabled.';
+        copy.appendChild(note);
+      }
+      exampleCode.replaceChildren(copy);
+    } catch {
+      if (request === openedExample) exampleCode.textContent = 'Could not load the example code. You can open the full guide using the link below.';
+    }
   });
 }
 exampleDialog.querySelector('.modal-close').addEventListener('click', () => exampleDialog.close());
@@ -145,3 +166,6 @@ exampleDialog.addEventListener('click', event => {
   if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) exampleDialog.close();
 });
 document.querySelector('#example-guide').addEventListener('click', () => exampleDialog.close());
+
+const guideSections = ['start', 'line-plots', 'bar-plots', 'linked', 'custom-drawing', 'animation-updates', 'time-axes', 'typescript', 'reference', 'notes'];
+if (guideSections.includes(location.hash.slice(1))) location.replace('guide.html' + location.hash);

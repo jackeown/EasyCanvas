@@ -91,8 +91,10 @@ plot.setAttribute('framerate', '30');
 const xs = Array.from({ length: 161 }, (_, i) => i / 20);
 plot.drawingLoop = () => {
   const t = performance.now() / 1000;
+  plot.ctx.save();
   plot.ctx.strokeStyle = '#2457dc';
   plot.drawLine({ xs, ys: xs.map(x => Math.sin(x - t)) });
+  plot.ctx.restore();
 };
 }
 
@@ -122,9 +124,11 @@ document.querySelector('#toggle-animation').addEventListener('click', event => {
     // Freeze the drawing itself, since framerate=0 still permits timer redraws.
     frozenTime = performance.now() / 1000;
     animation.drawingLoop = () => {
+      animation.ctx.save();
       animation.ctx.strokeStyle = '#2457dc';
       const xs = Array.from({length: 161}, (_, i) => i / 20);
       animation.drawLine({xs, ys: xs.map(x => Math.sin(x - frozenTime))});
+      animation.ctx.restore();
     };
   } else animation.drawingLoop = drawAnimation;
   event.currentTarget.setAttribute('aria-pressed', String(paused));
@@ -154,4 +158,3 @@ const observer = new IntersectionObserver(entries => {
   }
 }, {rootMargin: '-10% 0px -65% 0px'});
 for (const section of document.querySelectorAll('main section')) observer.observe(section);
-

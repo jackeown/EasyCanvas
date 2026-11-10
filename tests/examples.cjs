@@ -14,7 +14,7 @@ const coordinateMethods = new Set(['moveTo', 'lineTo', 'translate', 'rotate', 'c
 const ctx = new Proxy({}, {
   get(target, key) {
     if (!(key in target)) target[key] = (...args) => {
-      if (coordinateMethods.has(key)) for (const n of args) assert.ok(Number.isFinite(n), `${key}: finite coordinate, got ${n}`);
+      if (coordinateMethods.has(key)) for (const n of (key === 'arc' ? args.slice(0, 5) : args)) assert.ok(Number.isFinite(n), `${key}: finite coordinate, got ${n}`);
       if (key === 'fillText') textLabels.push(String(args[0]));
       if (key === 'stroke') strokes++;
       if (key === 'fill' || key === 'fillRect') fills++;
@@ -84,7 +84,7 @@ for (const id of ['lines', 'bars', 'custom', 'animation', 'dates']) {
 document.querySelectorAll = () => [...elements.entries()].filter(([id]) => id.startsWith('gallery-')).map(([, plot]) => plot);
 sandbox.matchMedia = () => ({matches: false});
 const gallery = fs.readFileSync(path.join(root, 'docs/gallery.js'), 'utf8');
-vm.runInContext(gallery.split('const exampleDialog =')[0], sandbox);
+vm.runInContext(gallery.split('const guideSections =')[0], sandbox);
 for (const [id, plot] of elements) {
   if (!id.startsWith('gallery-')) continue;
   const before = strokes;
@@ -109,7 +109,7 @@ for (const [id, example] of Object.entries(customExamples)) {
   plot.renderPlot();
   sandbox.matchMedia = () => ({matches: false});
 }
-console.log('PASS: four custom experiments draw finite paths and handle pointer/reduced-motion inputs.');
+console.log('PASS: gallery additions draw finite paths and handle pointer/reduced-motion inputs.');
 
 // Render tick callbacks and formatted tooltips through the actual browser bundle.
 const timePlot = document.createElement('easy-canvas');
@@ -154,3 +154,19 @@ for (const span of ['500','30000','1800000','86400000','604800000','157680000000
  }
 }
 console.log('PASS: tick and tooltip callbacks, readable dates, and 54 time-demo configurations.');
+
+const chart = document.createElement('easy-canvas');
+chart.debug = false;
+chart.fixDPI();
+const bins = chart.hotAndReady.histogram([0, 1, 2, 4, 9, NaN], {bins: 2, range: [0, 4], density: true});
+assert.equal(JSON.stringify(bins.map(bin => bin.count)), '[2,2]', 'The final bin includes the upper endpoint');
+assert.equal(bins.reduce((sum, bin) => sum + bin.height * (bin.max - bin.min), 0), 1, 'Density integrates to one');
+const values = [4, 100, 2, 1, 3];
+const [summary] = chart.hotAndReady.boxPlot(values);
+assert.equal(summary.q1, 2);
+assert.equal(summary.median, 3);
+assert.equal(summary.q3, 4);
+assert.equal(summary.high, 4);
+assert.equal(JSON.stringify(summary.outliers), '[100]');
+assert.deepEqual(values, [4, 100, 2, 1, 3], 'Box plot does not reorder its input');
+console.log('PASS: histogram boundaries and density, box quartiles and outliers.');

@@ -225,7 +225,7 @@ class EasyCanvas extends HTMLElement {
         // Constantly adjust DPI with possibly changing screen size
         this.DPIHasBeenSet = false;
         this.dpiInterval = setInterval(this.fixDPI.bind(this), 500);
-        window.addEventListener("load", this.fixDPI.bind(this));
+        window.addEventListener("load", () => this.fixDPI(), {once: true});
         
         // config
         this.framerate = 30;
@@ -354,7 +354,7 @@ class EasyCanvas extends HTMLElement {
             console.error(e);
         }
         finally {
-            requestAnimationFrame(this.renderPlotLoop.bind(this));
+            this.renderFrame = requestAnimationFrame(this.renderPlotLoop.bind(this));
         }
     }
 

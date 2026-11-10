@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>EasyCanvas Playground</title>
+  <link rel="stylesheet" href="docs/style.css">
+  <script src="docs/theme.js"></script>
+  <script src="docs/playground.js" defer></script>
+</head>
+<body>
+  <header>
+    <a class="brand" href="./">easy<span>Canvas</span><span class="brand-dot">.</span></a>
+    <a class="header-guide" href="guide.html">Documentation</a>
+    <a href="./#gallery">Gallery</a>
+    <button type="button" class="theme-toggle" data-theme-toggle aria-pressed="false">Dark mode</button>
+  </header>
+  <main class="playground">
+    <h1>Playground</h1>
+    <p id="preset-description">Choose an example and edit its JavaScript, HTML, or CSS. Try changing the font size to see it update.</p>
+    <div class="playground-toolbar">
+      <label>Example <select id="preset" disabled></select></label>
+      <button class="small-button" type="button" id="run" disabled>Run</button>
+      <button class="small-button" type="button" id="reset" disabled>Reset code</button>
+      <label><input type="checkbox" id="auto-run" checked> Auto-run</label>
+    </div>
+    <div class="playground-panes">
+      <div class="playground-editor">
+        <label for="editor-language">Edit</label>
+        <select id="editor-language">
+          <option value="js">JavaScript</option>
+          <option value="html">HTML</option>
+          <option value="css">CSS</option>
+        </select>
+        <textarea id="editor" aria-label="JavaScript source" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+      </div>
+      <section class="playground-preview" aria-labelledby="preview-heading">
+        <h2 id="preview-heading">Preview</h2>
+        <iframe id="preview" title="EasyCanvas chart preview" sandbox="allow-scripts"></iframe>
+        <p id="preview-status" role="status">Loading examples…</p>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

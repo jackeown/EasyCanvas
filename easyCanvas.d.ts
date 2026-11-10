@@ -53,6 +53,56 @@ export interface AxisSettings extends Pick<TimeAxisOptions, "locale" | "timeZone
   scaleStart?: number; scaleEnd?: number;
   isDatetime?: boolean;
 }
+export interface ChartSettings extends PlotLabels, DefaultAxesSettings {
+  color?: string;
+  axes?: boolean;
+}
+export interface HistogramSettings extends ChartSettings {
+  bins?: number;
+  range?: [number, number];
+  density?: boolean;
+  gap?: number;
+}
+export interface HistogramBin { min: number; max: number; count: number; height: number; }
+export interface PieSettings extends PlotLabels {
+  color?: string;
+  labels?: string[];
+  innerRadius?: number;
+  startAngle?: number;
+  showLabels?: boolean;
+  labelColor?: string;
+}
+export interface BoxSettings extends ChartSettings {
+  whiskerFactor?: number;
+  boxWidth?: number;
+  showOutliers?: boolean;
+}
+export interface BoxSummary {
+  label?: string;
+  q1: number;
+  median: number;
+  q3: number;
+  low: number;
+  high: number;
+  outliers: number[];
+}
+export interface XYData { xs: number[]; ys: number[]; }
+export interface ScatterData extends XYData { radii?: number[]; }
+export interface ScatterSettings extends ChartSettings { radius?: number; opacity?: number; }
+export interface AreaSettings extends ChartSettings { baseline?: number; opacity?: number; lineWidth?: number; }
+export interface HeatmapSettings extends ChartSettings {
+  range?: [number, number];
+  colorScale?: (value: number, fraction: number) => string;
+}
+export interface RichTextOptions {
+  richText?: (context: CanvasRenderingContext2D, text: string, x: number, y: number,
+    font: string, align: CanvasTextAlign, color: CanvasRenderingContext2D['fillStyle']) => boolean;
+}
+export interface RichCanvasElement extends EasyCanvasElement {
+  requestRender(): void;
+  getDrawingContext(): CanvasRenderingContext2D;
+  disposeRichRendering(): void;
+}
 export interface EasyCanvasElement extends HTMLElement {
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
@@ -69,8 +119,14 @@ export interface EasyCanvasElement extends HTMLElement {
   hotAndReady: {
     linePlot(data: LinePlotData, settings: LinePlotSettings): void;
     barPlot(data: BarPlotData, settings: PlotLabels): void;
-    /** Historical placeholder; does not render a histogram. */
-    histogram(data: unknown): void;
+    histogram(data: number[] | {values: number[]}, settings?: HistogramSettings): HistogramBin[];
+    pieChart(data: number[] | {values: number[]; labels?: string[]}, settings?: PieSettings): void;
+    donutChart(data: number[] | {values: number[]; labels?: string[]}, settings?: PieSettings): void;
+    boxPlot(data: number[] | Record<string, number[]>, settings?: BoxSettings): BoxSummary[];
+    scatterPlot(data: ScatterData, settings?: ScatterSettings): void;
+    bubblePlot(data: ScatterData, settings?: ScatterSettings): void;
+    areaPlot(data: XYData, settings?: AreaSettings): void;
+    heatmap(data: (number | null)[][], settings?: HeatmapSettings): void;
     drawTooltip(x: number, y: number, info: Record<string, unknown>): void;
   };
   scaleX(value: number): number;
@@ -92,5 +148,7 @@ export interface EasyCanvasElement extends HTMLElement {
   drawDefaultAxes(settings?: DefaultAxesSettings): void;
 }
 declare global {
+  /** Available after loading the optional easyCanvasRichText.js script. */
+  function enhanceEasyCanvas(plot: EasyCanvasElement, options?: RichTextOptions): RichCanvasElement;
   interface HTMLElementTagNameMap { 'easy-canvas': EasyCanvasElement; }
 }

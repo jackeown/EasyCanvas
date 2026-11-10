@@ -60,6 +60,7 @@ function drawTooltip(x,y,info){
 }
 
 function drawLegend(labels, settings){
+    if (!labels.length) return;
     
     let padding = this.fontsize / 2;
     let lineHeight = this.fontsize;
@@ -384,20 +385,9 @@ function barPlot(data, settings){
 
 
 
-function histogram(data){
-    this.setAttribute("default-axes-on","false");
-
-}
-
 module.exports = {
-    "linePlot": linePlot,
-    "barPlot": barPlot,
-    "histogram": histogram,
-    "drawTooltip": drawTooltip
-}
-
-// module.exports = [
-//     ["linePlot",linePlot],
-//     ["barPlot", barPlot],
-//     ["histogram", barPlot]
-// ]; 
+    linePlot,
+    barPlot,
+    drawTooltip,
+    ...require('./easyCanvasCharts.js')(drawLegendAxesLabelsAndTitle)
+};

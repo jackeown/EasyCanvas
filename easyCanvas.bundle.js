@@ -226,7 +226,7 @@ class EasyCanvas extends HTMLElement {
         // Constantly adjust DPI with possibly changing screen size
         this.DPIHasBeenSet = false;
         this.dpiInterval = setInterval(this.fixDPI.bind(this), 500);
-        window.addEventListener("load", this.fixDPI.bind(this));
+        window.addEventListener("load", () => this.fixDPI(), {once: true});
         
         // config
         this.framerate = 30;
@@ -355,7 +355,7 @@ class EasyCanvas extends HTMLElement {
             console.error(e);
         }
         finally {
-            requestAnimationFrame(this.renderPlotLoop.bind(this));
+            this.renderFrame = requestAnimationFrame(this.renderPlotLoop.bind(this));
         }
     }
 
@@ -602,7 +602,248 @@ link.setAttribute('rel', 'stylesheet');
 link.setAttribute('type', 'text/css');
 link.setAttribute('href', 'https://fonts.googleapis.com/css?family=Lato:100,200,300,400,500,600');
 document.head.appendChild(link);
-},{"./easyCanvasHotAndReady.js":2,"./helpers.js":3}],2:[function(require,module,exports){
+},{"./easyCanvasHotAndReady.js":3,"./helpers.js":4}],2:[function(require,module,exports){
+const defaultColors = ['#789beb', '#ef9c75', '#6dbba9', '#c2a2de', '#ecc36e', '#e4a3b0'];
+
+const chartBounds = new WeakMap();
+const finite = value => typeof value === 'number' && Number.isFinite(value);
+
+function extent(values) {
+    let min = Infinity;
+    let max = -Infinity;
+    for (const value of values) {
+        min = Math.min(min, value);
+        max = Math.max(max, value);
+    }
+    return min === max ? [min - Math.max(0.5, Math.abs(min) * 0.01), max + Math.max(0.5, Math.abs(max) * 0.01)] : [min, max];
+}
+
+function color(settings, index = 0) {
+    const colors = settings.colors?.length ? settings.colors : defaultColors;
+    return settings.color ?? colors[index % colors.length];
+}
+
+function pixelRect(plot, x1, y1, x2, y2) {
+    const x = plot.scaleX(x1);
+    const y = plot.scaleY(y1);
+    const right = plot.scaleX(x2);
+    const bottom = plot.scaleY(y2);
+    plot.ctx.fillRect(Math.min(x, right), Math.min(y, bottom), Math.abs(right - x), Math.abs(bottom - y));
+}
+
+function cartesian(plot, kind, bounds, settings, draw, decorate) {
+    if (plot.defaultAxesOn) plot.setAttribute('default-axes-on', 'false');
+    const key = kind + ':' + bounds.join(',');
+    if (settings.autoScale === false) {
+        chartBounds.delete(plot);
+    } else if (chartBounds.get(plot) !== key) {
+        ['xmin', 'xmax', 'ymin', 'ymax'].forEach((name, index) => plot.setAttribute(name, String(bounds[index])));
+        chartBounds.set(plot, key);
+    }
+    plot.ctx.save();
+    try {
+        draw();
+        plot.ctx.fillStyle = '#20272c';
+        plot.ctx.strokeStyle = '#20272c';
+        if (settings.axes !== false) plot.drawDefaultAxes(settings);
+        decorate.call(plot, {title: '', xLabel: '', yLabel: '', legendLabels: [], ...settings});
+    } finally {
+        plot.ctx.restore();
+    }
+}
+
+function quantile(sorted, fraction) {
+    const index = (sorted.length - 1) * fraction;
+    const lower = Math.floor(index);
+    return sorted[lower] + (sorted[Math.ceil(index)] - sorted[lower]) * (index - lower);
+}
+
+module.exports = function createChartHelpers(decorate) {
+    function histogram(data, settings = {}) {
+        const values = (Array.isArray(data) ? data : data.values).filter(finite);
+        if (!values.length) return [];
+        const bins = settings.bins ?? Math.min(1000, Math.ceil(Math.sqrt(values.length)));
+        if (!Number.isInteger(bins) || bins < 1 || bins > 1000) throw new RangeError('bins must be an integer from 1 to 1000');
+        const [min, max] = settings.range ?? extent(values);
+        if (!finite(min) || !finite(max) || max <= min || !finite(max - min)) throw new RangeError('range must contain two increasing finite bounds');
+        const width = (max - min) / bins;
+        const counts = Array(bins).fill(0);
+        for (const value of values) {
+            if (value >= min && value <= max) counts[Math.min(bins - 1, Math.floor((value - min) / width))]++;
+        }
+        const total = counts.reduce((sum, count) => sum + count, 0);
+        const bars = counts.map((count, i) => ({
+            min: min + i * width,
+            max: i === bins - 1 ? max : min + (i + 1) * width,
+            count,
+            height: settings.density && total ? count / (total * width) : count
+        }));
+        const gap = Math.max(0, Math.min(0.9, settings.gap ?? 0.06)) * width / 2;
+        cartesian(this, 'histogram', [min, max, 0, Math.max(...bars.map(bar => bar.height), settings.density ? Number.EPSILON : 1) * 1.08], settings, () => {
+            this.ctx.fillStyle = color(settings);
+            for (const bar of bars) pixelRect(this, bar.min + gap, 0, bar.max - gap, bar.height);
+        }, decorate);
+        return bars;
+    }
+
+    function pieChart(data, settings = {}) {
+        const values = Array.isArray(data) ? data : data.values;
+        const labels = settings.labels ?? (Array.isArray(data) ? [] : data.labels) ?? [];
+        if (!values.every(value => finite(value) && value >= 0)) throw new RangeError('Pie values must be finite and nonnegative');
+        const total = values.reduce((sum, value) => sum + value, 0);
+        if (!total) return;
+        if (!finite(total)) throw new RangeError('Pie total must be finite');
+        if (this.defaultAxesOn) this.setAttribute('default-axes-on', 'false');
+        const ctx = this.ctx;
+        const x = this.canvas.width / 2;
+        const y = this.canvas.height * (settings.title ? 0.56 : 0.5);
+        const radius = Math.min(this.canvas.width, this.canvas.height) * 0.36;
+        const inner = radius * Math.max(0, Math.min(0.95, settings.innerRadius ?? 0));
+        let angle = settings.startAngle ?? -Math.PI / 2;
+        ctx.save();
+        try {
+            for (const [index, value] of values.entries()) {
+                if (!value) continue;
+                const fraction = value / total;
+                const end = angle + fraction * Math.PI * 2;
+                ctx.beginPath();
+                ctx.arc(x, y, radius, angle, end);
+                if (inner) ctx.arc(x, y, inner, end, angle, true);
+                else ctx.lineTo(x, y);
+                ctx.closePath();
+                ctx.fillStyle = color(settings, index);
+                ctx.fill();
+                if (settings.showLabels !== false && fraction >= 0.04) {
+                    const mid = (angle + end) / 2;
+                    const distance = (radius + inner) * 0.57;
+                    ctx.fillStyle = settings.labelColor ?? '#20272c';
+                    this.drawLabel({
+                        text: labels[index] ?? (fraction * 100).toFixed(0) + '%',
+                        x: x + distance * Math.cos(mid), y: y + distance * Math.sin(mid),
+                        textAlign: 'center', textBaseline: 'middle', font: this.fontsize + 'px Lato'
+                    });
+                }
+                angle = end;
+            }
+            ctx.fillStyle = '#20272c';
+            decorate.call(this, {title: '', xLabel: '', yLabel: '', legendLabels: [], ...settings});
+        } finally {
+            ctx.restore();
+        }
+    }
+
+    function donutChart(data, settings = {}) {
+        return pieChart.call(this, data, {innerRadius: 0.55, ...settings});
+    }
+
+    function boxPlot(data, settings = {}) {
+        const groups = Array.isArray(data) ? [{values: data}] : Object.entries(data).map(([label, values]) => ({label, values}));
+        const summaries = [];
+        const factor = settings.whiskerFactor ?? 1.5;
+        if (!finite(factor) || factor < 0) throw new RangeError('whiskerFactor must be nonnegative');
+        for (const {label, values} of groups) {
+            const sorted = values.filter(finite).sort((a, b) => a - b);
+            if (!sorted.length) continue;
+            const q1 = quantile(sorted, 0.25);
+            const median = quantile(sorted, 0.5);
+            const q3 = quantile(sorted, 0.75);
+            const spread = (q3 - q1) * factor;
+            const inside = sorted.filter(value => value >= q1 - spread && value <= q3 + spread);
+            summaries.push({label, q1, median, q3, low: inside[0] ?? q1, high: inside.at(-1) ?? q3,
+                outliers: sorted.filter(value => value < q1 - spread || value > q3 + spread)});
+        }
+        if (!summaries.length) return summaries;
+        const [min, max] = extent(summaries.flatMap(box => [box.low, box.high, ...box.outliers]));
+        const padding = (max - min) * 0.07;
+        cartesian(this, 'box', [0, summaries.length + 1, min - padding, max + padding], {
+            ...settings, xTicks: summaries.length + 1,
+            xTickFormat: value => summaries[Math.round(value) - 1]?.label ?? ''
+        }, () => {
+            for (const [i, box] of summaries.entries()) {
+                const x = i + 1;
+                const half = Math.max(0.05, Math.min(0.48, (settings.boxWidth ?? 0.55) / 2));
+                this.ctx.fillStyle = color(settings, i);
+                pixelRect(this, x - half, box.q1, x + half, box.q3);
+                this.ctx.strokeStyle = '#20272c';
+                this.drawLine({xs: [x, x], ys: [box.low, box.q1]});
+                this.drawLine({xs: [x, x], ys: [box.q3, box.high]});
+                for (const y of [box.low, box.median, box.high]) this.drawLine({xs: [x - half, x + half], ys: [y, y]});
+                if (settings.showOutliers !== false) {
+                    for (const y of box.outliers) {
+                        this.ctx.beginPath();
+                        this.ctx.arc(this.scaleX(x), this.scaleY(y), 2.5 * this.dpr, 0, Math.PI * 2);
+                        this.ctx.fill();
+                    }
+                }
+            }
+        }, decorate);
+        return summaries;
+    }
+
+    function paired(data) {
+        return data.xs.flatMap((x, index) => finite(x) && finite(data.ys[index]) ? [{x, y: data.ys[index], index}] : []);
+    }
+
+    function scatterPlot(data, settings = {}) {
+        const points = paired(data);
+        if (!points.length) return;
+        cartesian(this, 'scatter', [...extent(points.map(p => p.x)), ...extent(points.map(p => p.y))], settings, () => {
+            this.ctx.fillStyle = color(settings);
+            this.ctx.globalAlpha = settings.opacity ?? 0.8;
+            for (const {x, y, index} of points) {
+                const radius = data.radii?.[index] ?? settings.radius ?? 4;
+                if (!finite(radius) || radius <= 0) continue;
+                this.ctx.beginPath();
+                this.ctx.arc(this.scaleX(x), this.scaleY(y), radius * this.dpr, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+            this.ctx.globalAlpha = 1;
+        }, decorate);
+    }
+
+    function areaPlot(data, settings = {}) {
+        const points = paired(data);
+        if (!points.length) return;
+        const baseline = settings.baseline ?? 0;
+        cartesian(this, 'area', [...extent(points.map(p => p.x)), ...extent([baseline, ...points.map(p => p.y)])], settings, () => {
+            this.ctx.fillStyle = color(settings);
+            this.ctx.globalAlpha = settings.opacity ?? 0.26;
+            this.ctx.beginPath();
+            this.ctx.moveTo(this.scaleX(points[0].x), this.scaleY(baseline));
+            for (const {x, y} of points) this.ctx.lineTo(this.scaleX(x), this.scaleY(y));
+            this.ctx.lineTo(this.scaleX(points.at(-1).x), this.scaleY(baseline));
+            this.ctx.closePath();
+            this.ctx.fill();
+            this.ctx.globalAlpha = 1;
+            this.ctx.strokeStyle = color(settings);
+            this.drawLine({xs: points.map(p => p.x), ys: points.map(p => p.y)}, settings.lineWidth ?? 2);
+        }, decorate);
+    }
+
+    function heatmap(data, settings = {}) {
+        const rows = data.length;
+        const columns = data.reduce((width, row) => Math.max(width, row.length), 0);
+        const values = data.flat().filter(finite);
+        if (!rows || !columns || !values.length) return;
+        const [min, max] = settings.range ?? extent(values);
+        if (!finite(min) || !finite(max) || max <= min) throw new RangeError('range must contain two increasing finite bounds');
+        const palette = settings.colors?.length ? settings.colors : ['#eff6ff', '#bfdbfe', '#60a5fa', '#2563eb', '#172554'];
+        cartesian(this, 'heatmap', [0, columns, 0, rows], {axes: false, ...settings}, () => {
+            for (const [row, cells] of data.entries()) {
+                for (const [column, value] of cells.entries()) {
+                    if (!finite(value)) continue;
+                    const fraction = Math.max(0, Math.min(1, (value - min) / (max - min)));
+                    this.ctx.fillStyle = settings.colorScale?.(value, fraction) ?? palette[Math.min(palette.length - 1, Math.floor(fraction * palette.length))];
+                    pixelRect(this, column, rows - row - 1, column + 1, rows - row);
+                }
+            }
+        }, decorate);
+    }
+
+    return {histogram, pieChart, donutChart, boxPlot, scatterPlot, bubblePlot: scatterPlot, areaPlot, heatmap};
+};
+
+},{}],3:[function(require,module,exports){
 /* this file contains functions for making very common plots using easyCanvas */
 /* they will be made accessable via EasyCanvas.hotAndReady */
 
@@ -665,6 +906,7 @@ function drawTooltip(x,y,info){
 }
 
 function drawLegend(labels, settings){
+    if (!labels.length) return;
     
     let padding = this.fontsize / 2;
     let lineHeight = this.fontsize;
@@ -989,24 +1231,14 @@ function barPlot(data, settings){
 
 
 
-function histogram(data){
-    this.setAttribute("default-axes-on","false");
-
-}
-
 module.exports = {
-    "linePlot": linePlot,
-    "barPlot": barPlot,
-    "histogram": histogram,
-    "drawTooltip": drawTooltip
-}
+    linePlot,
+    barPlot,
+    drawTooltip,
+    ...require('./easyCanvasCharts.js')(drawLegendAxesLabelsAndTitle)
+};
 
-// module.exports = [
-//     ["linePlot",linePlot],
-//     ["barPlot", barPlot],
-//     ["histogram", barPlot]
-// ]; 
-},{"./helpers.js":3}],3:[function(require,module,exports){
+},{"./easyCanvasCharts.js":2,"./helpers.js":4}],4:[function(require,module,exports){
 let defaultColors = ["red", "green","orange", "blue", "purple", "yellow"];
 
 function zip(xs,ys){

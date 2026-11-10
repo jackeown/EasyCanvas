@@ -38,7 +38,6 @@ Or use `<easy-canvas id="plot" style="display:block;height:360px"></easy-canvas>
 - Custom data coordinates, canvas helpers, hit testing, and direct access to `ctx`.
 - Automatic redraws and size/resolution adjustment.
 
-`histogram` is an unfinished historical placeholder, not a working chart type.
 
 [Read the full API reference](https://jackeown.github.io/EasyCanvas/#reference) for options, defaults, and existing limitations.
 
@@ -94,10 +93,28 @@ Code highlighting is pre-rendered with Prism (MIT; see `docs/PRISM-LICENSE.txt`)
 
 The homepage opens with classic graphs and custom drawing experiments. Click a chart title for its highlighted code and explanation; close the dialog with Escape, the close button, or the backdrop. The full documentation lives separately at `guide.html`, keeping the homepage focused on the gallery.
 
-Custom gallery examples live in `docs/custom-examples.json`. Run `npm run docs:highlight` after edits to generate both their executable code and highlighted modal source.
+Gallery additions live in `docs/custom-examples.json`. The playground reads these examples directly. Run `npm run docs:highlight` after edits to regenerate their gallery script.
 
 ## Time axes and tooltips
 
 Set `xAxisIsTime: true` (or `yAxisIsTime`) for millisecond timestamps. Optional `locale`, `timeZone` and `timeFormat` settings use `Intl.DateTimeFormat`; omitting them preserves the original automatic tick labels. `xTickFormat` and `yTickFormat` accept callbacks for arbitrary tick formatting. `tooltipFormatters` maps data column names to `(value, index) => string`; date columns on time axes get readable timestamps by default.
 
 The interactive date demo covers milliseconds through years, locales, timezones, custom labels and resetting the view. The [API reference](https://jackeown.github.io/EasyCanvas/guide.html#reference) is grouped into collapsible, searchable sections for hotAndReady and the core canvas API.
+
+
+## More charts and live editing
+
+Use these helpers inside `drawingLoop`. The settings argument is optional.
+
+| Helper | Smallest input |
+| --- | --- |
+| `histogram` | `[1, 2, 2, 3]` |
+| `pieChart` / `donutChart` | `[45, 35, 20]` |
+| `boxPlot` | `[1, 2, 3, 8]` or named groups |
+| `scatterPlot` / `bubblePlot` | `{xs: [1, 2], ys: [3, 5]}` with optional `radii` |
+| `areaPlot` | `{xs: [0, 1], ys: [2, 4]}` |
+| `heatmap` | `[[1, 2], [3, 4]]` |
+
+Open any gallery title in the [playground](https://jackeown.github.io/EasyCanvas/playground.html). Edit JavaScript, HTML, or CSS and the sandboxed preview updates after a brief pause.
+
+Load `easyCanvasRichText.js` after the bundle for optional rich text and on-demand drawing. Call `enhanceEasyCanvas(plot, {richText})`, then `plot.requestRender()` after changes. The callback can draw the text and return true, or return false for normal canvas text. `plot.disposeRichRendering()` restores the normal drawing loop.

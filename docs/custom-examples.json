@@ -22,5 +22,53 @@
     "caption": "Layered parametric loops, slowly breathing.",
     "description": "A rolling-circle formula produces a hypotrochoid. Several colored versions of the curve are drawn with a small phase offset that changes over time. All coordinates are passed through EasyCanvas drawLine; there is no chart-specific helper or extra dependency. Reduced-motion preferences hold the phase still.",
     "code": "const plot = document.querySelector('#gallery-spirograph');\nplot.setAttribute('default-axes-on', 'false');\nplot.setAttribute('controls', 'false');\nplot.setAttribute('xpadding', '4');\nplot.setAttribute('ypadding', '4');\nplot.setAttribute('xmin', '-7');\nplot.setAttribute('xmax', '7');\nplot.setAttribute('ymin', '-5');\nplot.setAttribute('ymax', '5');\nconst still = matchMedia('(prefers-reduced-motion: reduce)').matches;\nconst angles = Array.from({ length: 901 }, (_, i) => i * Math.PI / 75);\nplot.drawingLoop = () => {\n  const ctx = plot.ctx;\n  const time = still ? 0.4 : performance.now() / 5000;\n  ctx.save();\n  ctx.fillStyle = '#20152e';\n  ctx.fillRect(0, 0, plot.canvas.width, plot.canvas.height);\n  for (let layer = 0; layer < 5; layer++) {\n    const d = 1.8 + layer * 0.12;\n    const phase = time + layer * 0.14;\n    ctx.strokeStyle = `hsla(${275 + layer * 24}, 90%, 75%, 0.7)`;\n    plot.drawLine({\n      xs: angles.map(t => 3 * Math.cos(t) + d * Math.cos(1.5 * t + phase)),\n      ys: angles.map(t => 3 * Math.sin(t) - d * Math.sin(1.5 * t + phase))\n    }, 1.6);\n  }\n  ctx.restore();\n};"
+  },
+  "histogram": {
+    "title": "Histogram",
+    "caption": "How often did each value occur?",
+    "description": "Pass raw numbers. Bins default to the square root of the sample size. Set bins, range, or density when you need more control.",
+    "code": "const plot = document.querySelector('#gallery-histogram');\nplot.setAttribute('fontsize', '24');\nconst values = Array.from({length: 180}, (_, i) =>\n  60 + 13 * Math.sin(i * 2.4) + 9 * Math.cos(i * 0.71) + 6 * Math.sin(i * 0.37));\nplot.drawingLoop = () => plot.hotAndReady.histogram(values, {\n  bins: 12, xLabel: 'Score', yLabel: 'Count', color: '#527add'\n});"
+  },
+  "pie": {
+    "title": "Pie chart",
+    "caption": "A quick look at the parts of a whole.",
+    "description": "Pass an array of nonnegative values. Labels default to percentages. Supply labels or colors to make the chart your own.",
+    "code": "const plot = document.querySelector('#gallery-pie');\nplot.setAttribute('fontsize', '24');\nplot.drawingLoop = () => plot.hotAndReady.pieChart([45, 28, 17, 10]);"
+  },
+  "donut": {
+    "title": "Donut chart",
+    "caption": "Same proportions, room in the middle.",
+    "description": "Donut charts use the same data as pies. innerRadius sets the hole size as a fraction of the outer radius.",
+    "code": "const plot = document.querySelector('#gallery-donut');\nplot.setAttribute('fontsize', '24');\nconst data = {values: [42, 31, 19, 8], labels: ['Train', 'Bike', 'Walk', 'Bus']};\nplot.drawingLoop = () => plot.hotAndReady.donutChart(data, {\n  innerRadius: 0.52, colors: ['#83a3f1', '#efb482', '#80c4ac', '#c6a6e5']\n});"
+  },
+  "box": {
+    "title": "Box and whisker",
+    "caption": "Compare distributions and spot outliers.",
+    "description": "Pass one array or a map of named groups. Boxes show the middle 50%, with a median line and whiskers to the last observations within 1.5 interquartile ranges. Points beyond that are shown separately.",
+    "code": "const plot = document.querySelector('#gallery-box');\nplot.setAttribute('fontsize', '24');\nconst groups = {\n  North: [9, 12, 14, 16, 17, 19, 23, 35],\n  South: [15, 18, 19, 21, 22, 25, 26, 28],\n  West: [7, 8, 12, 13, 16, 18, 19, 22]\n};\nplot.drawingLoop = () => plot.hotAndReady.boxPlot(groups);"
+  },
+  "scatter": {
+    "title": "Scatter plot",
+    "caption": "Plot paired values without connecting them.",
+    "description": "Give scatterPlot xs and ys arrays. Set radius in CSS pixels, or supply radii for a bubble plot.",
+    "code": "const plot = document.querySelector('#gallery-scatter');\nplot.setAttribute('fontsize', '24');\nconst xs = Array.from({length: 65}, (_, i) => i / 6);\nconst ys = xs.map((x, i) => x * 0.7 + Math.sin(i * 2.4) * 2 + 3);\nplot.drawingLoop = () => plot.hotAndReady.scatterPlot({xs, ys}, {\n  radius: 4, color: '#5076dc', xLabel: 'Input', yLabel: 'Output'\n});"
+  },
+  "bubble": {
+    "title": "Bubble plot",
+    "caption": "Give each observation a third dimension.",
+    "description": "Supply one radius per x/y pair. Radii use CSS pixels. Use square-root radii when you want circle area to represent magnitude.",
+    "code": "const plot = document.querySelector('#gallery-bubble');\nplot.setAttribute('fontsize', '24');\nconst xs = [1, 2, 3, 4, 5, 6, 7];\nconst ys = [3, 4, 2, 6, 4, 5, 7];\nconst radii = [7, 12, 6, 18, 10, 14, 20];\nplot.drawingLoop = () => plot.hotAndReady.bubblePlot({xs, ys, radii}, {\n  color: '#795bc6', opacity: 0.55\n});"
+  },
+  "area": {
+    "title": "Area chart",
+    "caption": "Fill between a series and its baseline.",
+    "description": "Pass xs and ys in drawing order. The baseline defaults to zero. Set baseline, opacity, or lineWidth to change the fill and outline.",
+    "code": "const plot = document.querySelector('#gallery-area');\nplot.setAttribute('fontsize', '24');\nconst xs = Array.from({length: 60}, (_, i) => i / 5);\nconst ys = xs.map(x => 5 + x / 3 + 1.5 * Math.sin(x) + 0.6 * Math.cos(2 * x));\nplot.drawingLoop = () => plot.hotAndReady.areaPlot({xs, ys}, {\n  color: '#3a9c89', xLabel: 'Hour'\n});"
+  },
+  "heatmap": {
+    "title": "Heatmap",
+    "caption": "A grid of values becomes a field of color.",
+    "description": "Pass a two-dimensional array in row order. Missing or non-finite cells are skipped. Set colors for a palette or colorScale(value, fraction) for continuous color.",
+    "code": "const plot = document.querySelector('#gallery-heatmap');\nplot.setAttribute('fontsize', '24');\nconst grid = Array.from({length: 18}, (_, row) =>\n  Array.from({length: 32}, (_, col) =>\n    Math.sin(row * 0.4) * Math.cos(col * 0.29) + Math.sin((row + col) * 0.4)));\nplot.drawingLoop = () => plot.hotAndReady.heatmap(grid, {\n  colorScale: (_, fraction) => `hsl(${245 - 200 * fraction}, 72%, ${28 + 45 * fraction}%)`\n});"
   }
 }

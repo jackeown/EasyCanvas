@@ -90,4 +90,4 @@ GitHub Pages serves the root of `master`; `.nojekyll` keeps these static files a
 
 Vercel is not needed. `vercel.json` disables automatic deployments from the old Vercel Git integration. The docs, examples, and downloadable bundle are hosted entirely on GitHub Pages.
 
-Code highlighting is pre-rendered with Prism (MIT; see `docs/PRISM-LICENSE.txt`), so the site needs no runtime highlighting dependency. After editing a code block, run `npm run docs:highlight`. Setup lines are gently muted; use **Show setup** to restore full contrast.
+Code highlighting is pre-rendered with Prism (MIT; see `docs/PRISM-LICENSE.txt`), so the site needs no runtime highlighting dependency. After editing a code block, run `npm run docs:highlight`. Setup lines are muted to 40% opacity; hover any muted line to brighten all setup lines in that block. Keyboard focus on the code block also restores full contrast.

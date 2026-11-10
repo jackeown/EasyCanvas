@@ -11,10 +11,7 @@ pre .token.atrule,pre .token.keyword{color:#c2b8ff}
 pre .token.function,pre .token.class-name{color:#91d9ee}
 pre .token.regex,pre .token.important{color:#f1ca91}
 pre .token.variable{color:#e2e9f2}
-pre .code-context{opacity:.8;transition:opacity .15s}
-pre .code-context:hover,pre:focus .code-context,.code-wrap[data-show-setup="true"] .code-context{opacity:1}
-.code-wrap:has(.setup-toggle) pre{padding-top:52px}
-.setup-toggle{position:absolute;left:12px;top:10px;border:1px solid #637387;background:transparent;color:#d0dbe7;font:11px var(--mono);border-radius:4px;padding:5px 10px}
-.setup-toggle:hover{background:#394a5e}
+pre .code-context{opacity:.4;transition:opacity .15s}
+pre:has(.code-context:hover) .code-context,pre:focus-visible .code-context{opacity:1}
 pre:focus-visible{outline:3px solid #df6846;outline-offset:3px}
 @media(prefers-reduced-motion:reduce){pre .code-context{transition:none}}

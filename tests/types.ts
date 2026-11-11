@@ -26,3 +26,7 @@ plot.theme = 'dark';
 plot.themeColors = {background:'#102b26', axes:'#8cd8c2', palette:['#91b6ff']};
 plot.drawDefaultAxes({axisColor:'#8cd8c2', textColor:'#e5fff5'});
 plot.themeColors = null;
+
+plot.theme = 'paper';
+plot.themeColors = {fontFamily:'Georgia, serif', titleFontFamily:'monospace', titleWeight:600};
+plot.getFont(24, 'title');

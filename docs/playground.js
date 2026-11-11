@@ -22,7 +22,7 @@
         const id = ++runId;
         reportedError = false;
         status.textContent = 'Running…';
-        preview.srcdoc = `<!doctype html><html lang="en"><head>
+        preview.srcdoc = `<!doctype html><html lang="en" data-theme="${document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'}"><head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width,initial-scale=1">
           <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval'; style-src 'unsafe-inline'; img-src data: blob:">
@@ -38,9 +38,18 @@
               report('error', args.map(value => value?.message || String(value)).join(' '));
               logError(...args);
             };
+            addEventListener('message', event => {
+              if (event.source === parent && ['light', 'dark'].includes(event.data?.easyCanvasSiteTheme)) {
+                document.documentElement.dataset.theme = event.data.easyCanvasSiteTheme;
+              }
+            });
             new Function(${encode(runtime)})();
           </script>
-          <style>${source.css}</style>
+          <style>
+            html { background: #fff; color: #20272c; }
+            html[data-theme="dark"] { background: #151921; color: #e4e9f2; color-scheme: dark; }
+            ${source.css}
+          </style>
           </head><body>${source.html}
           <script>
             try {
@@ -103,6 +112,10 @@
     resetButton.addEventListener('click', loadPreset);
     runButton.addEventListener('click', run);
 
+    new MutationObserver(() => {
+        preview.contentWindow?.postMessage({easyCanvasSiteTheme: document.documentElement.dataset.theme}, '*');
+    }).observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']});
+
     async function load(url, type) {
         const response = await fetch(url);
         if (!response.ok) throw new Error('Could not load examples');
@@ -114,9 +127,10 @@
         load('docs/custom-examples.json', 'json'),
         load('docs/feature-examples.json', 'json'),
         load('easyCanvas.bundle.js', 'text'),
-        load('easyCanvasRichText.js', 'text')
-    ]).then(([snippets, extra, features, library, addon]) => {
-        runtime = library + '\n' + addon;
+        load('easyCanvasRichText.js', 'text'),
+        load('docs/chart-site-theme.js', 'text')
+    ]).then(([snippets, extra, features, library, addon, siteTheme]) => {
+        runtime = library + '\n' + addon + '\n' + siteTheme;
         const originals = {
             lines: ['line', 'Line plot', 'Compare two series with the same x coordinates.'],
             bars: ['bar', 'Bar chart', 'Plot named categories and values.'],

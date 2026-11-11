@@ -14,6 +14,7 @@ const fillColors = [];
 const coordinateMethods = new Set(['moveTo', 'lineTo', 'translate', 'rotate', 'clearRect', 'rect', 'fillRect', 'arc']);
 const ctx = new Proxy({}, {
   get(target, key) {
+    if (key === 'measureText') return text => ({width: String(text).length * 12});
     if (!(key in target)) target[key] = (...args) => {
       if (coordinateMethods.has(key)) for (const n of (key === 'arc' ? args.slice(0, 5) : args)) assert.ok(Number.isFinite(n), `${key}: finite coordinate, got ${n}`);
       if (key === 'fillText') textLabels.push(String(args[0]));
@@ -246,3 +247,34 @@ assert.equal(themed.resolvedTheme, 'dark');
 themed.disconnectedCallback();
 assert.equal(themeListeners.size, 0, 'Detached graphs release their browser preference listener');
 console.log('PASS: browser theme preference, explicit modes, color overrides, and listener cleanup.');
+
+const originalLabel = pie.drawLabel;
+const positions = [];
+pie.drawLabel = function (settings) {
+    if (settings.text === '45%' || settings.text === '55%') positions.push({x:settings.x, y:settings.y});
+    return originalLabel.call(this, settings);
+};
+pie.mouseX = undefined;
+pie.mouseY = undefined;
+for (const innerRadius of [0.2, 0.55, 0.9, 0.95]) {
+    positions.length = 0;
+    pie.hotAndReady.donutChart([45,55], {innerRadius, showLegend:false});
+    const outer = Math.min(pie.canvas.width, pie.canvas.height) * 0.36;
+    const expected = outer * (1 + innerRadius) / 2;
+    assert.equal(positions.length, 2);
+    for (const label of positions) {
+        const distance = Math.hypot(label.x - pie.canvas.width / 2, label.y - pie.canvas.height / 2);
+        assert.ok(Math.abs(distance - expected) < 1e-8, 'Donut labels stay at the middle of the ring');
+    }
+}
+pie.drawLabel = originalLabel;
+assert.ok(!('themeToggle' in themed), 'The library does not create a theme button');
+for (const name of themed.availableThemes.filter(name => name !== 'auto')) {
+    themed.theme = name;
+    assert.equal(themed.resolvedTheme, name);
+    assert.ok(themed.themeColors.fontFamily && themed.getFont().includes(themed.themeColors.fontFamily));
+}
+themed.themeColors = {fontFamily:'monospace', titleFontFamily:'serif', titleWeight:700};
+assert.ok(themed.getFont().includes('monospace'));
+assert.ok(themed.getFont(30, 'title').includes('700 30px serif'));
+console.log('PASS: named theme typography, font overrides, and donut label placement across ring widths.');

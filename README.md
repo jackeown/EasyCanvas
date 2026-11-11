@@ -27,7 +27,7 @@ plot.drawingLoop = () => {
 };
 ```
 
-Or use `<easy-canvas id="plot" style="display:block;height:360px"></easy-canvas>` in HTML and select it from JavaScript. No framework or runtime package installation needed. The bundle requests the Lato font from Google Fonts; plots work without it.
+Or use `<easy-canvas id="plot" style="display:block;height:360px"></easy-canvas>` in HTML and select it from JavaScript. No framework or runtime package installation needed. Theme typography uses local browser and system font stacks.
 
 ## What’s here
 
@@ -91,7 +91,7 @@ Vercel is not needed. `vercel.json` disables automatic deployments from the old 
 
 Code highlighting is pre-rendered with Prism (MIT; see `docs/PRISM-LICENSE.txt`), so the site needs no runtime highlighting dependency. After editing a code block, run `npm run docs:highlight`. Setup lines are muted to 40% opacity; hover anywhere in the code region, including whitespace, to brighten all setup lines in that block. Keyboard focus on the code block also restores full contrast.
 
-The homepage opens with classic graphs and custom drawing experiments. Click a chart title for its highlighted code and explanation; close the dialog with Escape, the close button, or the backdrop. The full documentation lives separately at `guide.html`, keeping the homepage focused on the gallery.
+The homepage has classic graphs, EasyCanvas features, and custom drawings. Open a chart title to edit its source in the playground. The full documentation lives separately at `guide.html`, keeping the homepage focused on the gallery.
 
 Gallery additions live in `docs/custom-examples.json`. The playground reads these examples directly. Run `npm run docs:highlight` after edits to regenerate their gallery script.
 
@@ -126,8 +126,14 @@ The playground has a scrolling line-number gutter. Ctrl+/ (Cmd+/ on macOS) toggl
 
 ## Graph themes
 
-Every graph follows the browser color preference by default and has a small light/dark toggle. Choose a mode with `plot.theme = 'dark'`, `plot.theme = 'light'`, or `plot.theme = 'auto'`.
+Every graph follows the browser color preference by default. Choose a mode with `plot.theme = 'dark'`, `plot.theme = 'light'`, or `plot.theme = 'auto'`.
 
-Override individual colors by assigning `plot.themeColors`, for example `{background: '#102b26', axes: '#8cd8c2', foreground: '#e5fff5'}`. Other keys include `border`, `muted`, `tooltipBackground`, `legendBackground`, `sliceLabel`, and `palette`. Assign null to reset. Existing per-chart colors and direct canvas styles continue to work.
+Override individual colors by assigning `plot.themeColors`, for example `{background: '#102b26', axes: '#8cd8c2', foreground: '#e5fff5'}`. Other keys include `border`, `muted`, `tooltipBackground`, `legendBackground`, `sliceLabel`, `palette`, `fontFamily`, `titleFontFamily`, `fontWeight`, and `titleWeight`. Assign null to reset. Existing per-chart colors and direct canvas styles continue to work.
 
 The gallery has an EasyCanvas features section for linked plots, themes, pan/zoom, time series, and animation. The guide groups its navigation into getting started, API reference, features, and resources. Detailed date/time controls live in the guide.
+
+
+Theme presets include light, dark, paper, forest, midnight, and blueprint. Set `plot.theme` from your own button or selector. The [theme demo](https://jackeown.github.io/EasyCanvas/playground.html?example=themes) shows a line chart, bar chart, and donut chart side by side, with one selector updating their default colors and fonts. `plot.availableThemes` lists all supported names, including auto.
+
+
+On this website, automatic examples and playground previews follow the site theme choice. In other applications, auto continues to use the browser preference. The theme comparison selector can choose a preset independently.

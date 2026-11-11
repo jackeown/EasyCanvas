@@ -91,8 +91,11 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
         const ctx = this.ctx;
         const legendLabels = settings.showLegend === false ? [] :
             values.map((_, index) => settings.legendLabels?.[index] ?? labels[index] ?? 'Slice ' + (index + 1));
-        const longestLabel = Math.max(0, ...legendLabels.map(label => label.length));
-        const legendWidth = legendLabels.length ? Math.min(this.canvas.width * 0.45, longestLabel * this.fontsize / 2 + this.fontsize * 3.5) : 0;
+        ctx.save();
+        ctx.font = this.getFont();
+        const legendTextWidth = Math.max(0, ...legendLabels.map(label => ctx.measureText(label).width));
+        ctx.restore();
+        const legendWidth = legendLabels.length ? Math.min(this.canvas.width * 0.45, legendTextWidth + this.fontsize * 3.5) : 0;
         const chartWidth = this.canvas.width - legendWidth;
         const x = chartWidth / 2;
         const y = this.canvas.height * (settings.title ? 0.56 : 0.5);
@@ -136,12 +139,12 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
                 }
                 if (settings.showLabels !== false && fraction >= 0.04) {
                     const mid = (angle + end) / 2;
-                    const distance = (radius + inner) * 0.57;
+                    const distance = (radius + inner) / 2;
                     ctx.fillStyle = settings.labelColor ?? this.themeColors.sliceLabel;
                     this.drawLabel({
                         text: settings.labelFormatter?.(value, index, fraction) ?? labels[index] ?? (fraction * 100).toFixed(0) + '%',
                         x: x + distance * Math.cos(mid), y: y + distance * Math.sin(mid),
-                        textAlign: 'center', textBaseline: 'middle', font: this.fontsize + 'px Lato'
+                        textAlign: 'center', textBaseline: 'middle', font: this.getFont()
                     });
                 }
                 angle = end;

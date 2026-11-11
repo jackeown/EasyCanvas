@@ -61,8 +61,7 @@ class EasyCanvas extends HTMLElement {
             "default-axes-on",
             "controls",
             "fontsize",
-            "theme",
-            "show-theme-toggle"
+            "theme"
         ];
     }
     
@@ -266,12 +265,21 @@ class EasyCanvas extends HTMLElement {
 
     get theme() {
         const value = this.getAttribute('theme');
-        return value === 'light' || value === 'dark' ? value : 'auto';
+        return this.availableThemes.includes(value) ? value : 'auto';
     }
 
     set theme(value) {
-        if (!['auto', 'light', 'dark'].includes(value)) throw new RangeError('theme must be auto, light, or dark');
+        if (!this.availableThemes.includes(value)) throw new RangeError('Unknown theme: ' + value);
         this.setAttribute('theme', value);
+    }
+
+    get availableThemes() { return ['auto', ...chartTheme.names]; }
+
+    getFont(size = this.fontsize, kind = 'body') {
+        const style = this.themeColors;
+        const weight = kind === 'title' ? style.titleWeight : style.fontWeight;
+        const family = kind === 'title' ? style.titleFontFamily ?? style.fontFamily : style.fontFamily;
+        return weight + ' ' + size + 'px ' + family;
     }
 
     get resolvedTheme() { return chartTheme.resolvedTheme(this); }
@@ -308,7 +316,7 @@ class EasyCanvas extends HTMLElement {
         if(this.debug)
             console.log(`custom element attribute "${name}" has changed from "${oldValue}" to "${newValue}"`);
         
-        if (name === 'theme' || name === 'show-theme-toggle') {
+        if (name === 'theme') {
             chartTheme.updateTheme(this);
             return;
         }
@@ -441,25 +449,21 @@ class EasyCanvas extends HTMLElement {
     }
 
 
-    drawLabel(settings){
-        settings["theta"] = defaultVal(settings["theta"], 0);
-        settings["font"] = defaultVal(settings["font"], "20px Lato");
-        settings["textAlign"] = defaultVal(settings["textAlign"], "left");
-        settings["textBaseline"] = defaultVal(settings["textBaseline"], "alphabetic")
-
+    drawLabel(settings) {
+        const {
+            x, y, text, color, theta = 0, font = this.getFont(20),
+            textAlign = 'left', textBaseline = 'alphabetic'
+        } = settings;
         this.ctx.save();
-
-        if (settings.color) this.ctx.fillStyle = settings.color;
-        this.ctx.textBaseline = settings.textBaseline;
-        this.ctx.textAlign = settings.textAlign;
-        this.ctx.font = settings.font;
-        this.ctx.translate(settings.x, settings.y);
-        this.ctx.rotate(-settings.theta);
-        this.ctx.fillText(settings.text,0,0);
-
+        if (color) this.ctx.fillStyle = color;
+        this.ctx.textBaseline = textBaseline;
+        this.ctx.textAlign = textAlign;
+        this.ctx.font = font;
+        this.ctx.translate(x, y);
+        this.ctx.rotate(-theta);
+        this.ctx.fillText(text, 0, 0);
         this.ctx.restore();
     }
-
 
     drawAxis(settings){
         let {x1,y1,x2,y2} = settings
@@ -495,7 +499,7 @@ class EasyCanvas extends HTMLElement {
                 y: labelY, 
                 theta: labelTheta, 
                 textAlign: "center",
-                font: `${this.fontsize}px Lato`
+                font: this.getFont()
             };
             if(labels){
                 labelSettings.text = labels[i-1];
@@ -643,13 +647,6 @@ class EasyCanvas extends HTMLElement {
 
 customElements.define('easy-canvas', EasyCanvas);
 
-
-// hack to dynamically load css for easy-canvas...
-var link = document.createElement('link');
-link.setAttribute('rel', 'stylesheet');
-link.setAttribute('type', 'text/css');
-link.setAttribute('href', 'https://fonts.googleapis.com/css?family=Lato:100,200,300,400,500,600');
-document.head.appendChild(link);
 },{"./easyCanvasHotAndReady.js":3,"./easyCanvasTheme.js":4,"./helpers.js":5}],2:[function(require,module,exports){
 const chartBounds = new WeakMap();
 const finite = value => typeof value === 'number' && Number.isFinite(value);
@@ -744,8 +741,11 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
         const ctx = this.ctx;
         const legendLabels = settings.showLegend === false ? [] :
             values.map((_, index) => settings.legendLabels?.[index] ?? labels[index] ?? 'Slice ' + (index + 1));
-        const longestLabel = Math.max(0, ...legendLabels.map(label => label.length));
-        const legendWidth = legendLabels.length ? Math.min(this.canvas.width * 0.45, longestLabel * this.fontsize / 2 + this.fontsize * 3.5) : 0;
+        ctx.save();
+        ctx.font = this.getFont();
+        const legendTextWidth = Math.max(0, ...legendLabels.map(label => ctx.measureText(label).width));
+        ctx.restore();
+        const legendWidth = legendLabels.length ? Math.min(this.canvas.width * 0.45, legendTextWidth + this.fontsize * 3.5) : 0;
         const chartWidth = this.canvas.width - legendWidth;
         const x = chartWidth / 2;
         const y = this.canvas.height * (settings.title ? 0.56 : 0.5);
@@ -789,12 +789,12 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
                 }
                 if (settings.showLabels !== false && fraction >= 0.04) {
                     const mid = (angle + end) / 2;
-                    const distance = (radius + inner) * 0.57;
+                    const distance = (radius + inner) / 2;
                     ctx.fillStyle = settings.labelColor ?? this.themeColors.sliceLabel;
                     this.drawLabel({
                         text: settings.labelFormatter?.(value, index, fraction) ?? labels[index] ?? (fraction * 100).toFixed(0) + '%',
                         x: x + distance * Math.cos(mid), y: y + distance * Math.sin(mid),
-                        textAlign: 'center', textBaseline: 'middle', font: this.fontsize + 'px Lato'
+                        textAlign: 'center', textBaseline: 'middle', font: this.getFont()
                     });
                 }
                 angle = end;
@@ -938,10 +938,18 @@ let {defaultColors, zip, defaultVal, defaultVals, dist, getTimeLabel} = helpers;
 
 
 // tools
+function textWidth(plot, text, font) {
+    plot.ctx.save();
+    plot.ctx.font = font;
+    const width = plot.ctx.measureText(String(text)).width;
+    plot.ctx.restore();
+    return width;
+}
+
 function drawTooltip(x,y,info){
     let padding = 10;
     let lineHeight = this.fontsize;
-    let letterWidth = this.fontsize / 2;
+
 
     let keys = Object.keys(info);
     let values = Object.values(info);
@@ -953,7 +961,10 @@ function drawTooltip(x,y,info){
     // find height and width
     let h = labels.length * lineHeight;
     h += padding * (labels.length+1);
-    let w = Math.max(...labels.map(pair => pair[0].length + pair[1].length))*letterWidth + 2*padding;
+    const labelFont = 'bold ' + this.fontsize + 'px ' + this.themeColors.fontFamily;
+    const valueFont = this.getFont();
+    const widths = labels.map(pair => [textWidth(this, pair[0], labelFont), textWidth(this, pair[1], valueFont)]);
+    let w = Math.max(...widths.map(pair => pair[0] + pair[1])) + 2 * padding;
 
     // move tooltip up and left if necessary.
     if(x+w > this.canvas.width){
@@ -983,12 +994,12 @@ function drawTooltip(x,y,info){
         let labelSettings = {x: x1, y: y1, textBaseline: "bottom"}
 
         labelSettings.text = label[0];
-        labelSettings.font = `bold ${this.fontsize}px Lato`;
+        labelSettings.font = labelFont;
         this.drawLabel(labelSettings);
         
-        labelSettings.x += (letterWidth*label[0].length);
+        labelSettings.x += widths[i][0];
         labelSettings.text = label[1];
-        labelSettings.font = `${this.fontsize}px Lato`;
+        labelSettings.font = valueFont;
         this.drawLabel(labelSettings);
     }
 }
@@ -998,13 +1009,13 @@ function drawLegend(labels, settings){
     
     let padding = this.fontsize / 2;
     let lineHeight = this.fontsize;
-    let letterWidth = this.fontsize / 2;
+
     let patchSize = this.fontsize * (3/4);
 
     // Rectangle 
     let h = labels.length * lineHeight;
     h += padding * (labels.length+1);
-    let w = Math.max(...labels.map(v => v.text.length))*letterWidth + 3*padding + patchSize;
+    let w = Math.max(...labels.map(label => textWidth(this, label.text, this.getFont()))) + 3*padding + patchSize;
 
     let x = this.canvas.width - padding - w;
     let y = padding;
@@ -1033,7 +1044,7 @@ function drawLegend(labels, settings){
         // draw text
         x1 += (patchSize + padding);
         y1 += lineHeight;
-        this.drawLabel({text: label.text, x: x1, y: y1, font: `300 ${this.fontsize}px Lato`, textBaseline: "bottom"});
+        this.drawLabel({text: label.text, x: x1, y: y1, font: this.getFont(), textBaseline: "bottom"});
     }
 }
 
@@ -1054,17 +1065,17 @@ function drawLegendAxesLabelsAndTitle(settings){
     // draw title
     let titleX = this.canvas.width/2;
     let titleY = this.fontsize * 2.5;
-    this.drawLabel({text: title, x: titleX, y: titleY, font: `300 ${this.fontsize*2}px Lato`, textAlign: "center"});
+    this.drawLabel({text: title, x: titleX, y: titleY, font: this.getFont(this.fontsize * 2, 'title'), textAlign: "center"});
 
     // draw x-axis label
     let xLabelX = this.canvas.width/2;
     let xLabelY = this.canvas.height - (this.fontsize);
-    this.drawLabel({text: xLabel, x: xLabelX, y: xLabelY, font: `300 ${this.fontsize*2}px Lato`, textAlign: "center"});
+    this.drawLabel({text: xLabel, x: xLabelX, y: xLabelY, font: this.getFont(this.fontsize * 2, 'title'), textAlign: "center"});
 
     // draw y-axis label
     let yLabelX = this.fontsize*2;
     let yLabelY = this.canvas.height/2;
-    this.drawLabel({text: yLabel, x: yLabelX, y: yLabelY, theta: Math.PI/2, font: `300 ${this.fontsize*2}px Lato`, textAlign: "center"});
+    this.drawLabel({text: yLabel, x: yLabelX, y: yLabelY, theta: Math.PI/2, font: this.getFont(this.fontsize * 2, 'title'), textAlign: "center"});
 }
 
 
@@ -1328,44 +1339,65 @@ module.exports = {
 };
 
 },{"./easyCanvasCharts.js":2,"./helpers.js":5}],4:[function(require,module,exports){
-const palettes = {
+const presets = {
     light: {
         background: '#ffffff', foreground: '#20272c', axes: '#394553',
         border: '#cbd2dc', muted: '#596778', tooltipBackground: 'rgba(255,255,255,0.96)',
         legendBackground: 'rgba(255,255,255,0.9)', sliceLabel: '#ffffff',
-        palette: ['#2457dc', '#c54b2b', '#168574', '#744bb4', '#956b00', '#b44772']
+        palette: ['#2457dc', '#c54b2b', '#168574', '#744bb4', '#956b00', '#b44772'],
+        fontFamily: 'system-ui, sans-serif', fontWeight: 400, titleWeight: 600
     },
     dark: {
         background: '#171e2a', foreground: '#e7edf7', axes: '#b6c5dc',
         border: '#46536a', muted: '#afbdd2', tooltipBackground: 'rgba(28,38,55,0.97)',
         legendBackground: 'rgba(28,38,55,0.92)', sliceLabel: '#17202b',
-        palette: ['#91b6ff', '#ffb394', '#8cddc7', '#cdb2ff', '#f4d181', '#f3accb']
+        palette: ['#91b6ff', '#ffb394', '#8cddc7', '#cdb2ff', '#f4d181', '#f3accb'],
+        fontFamily: 'system-ui, sans-serif', fontWeight: 400, titleWeight: 600
+    },
+    paper: {
+        background: '#f7f0df', foreground: '#40372b', axes: '#756652',
+        border: '#d5c6a6', muted: '#776a58', tooltipBackground: '#fff9ec',
+        legendBackground: '#f7f0dfee', sliceLabel: '#fff8ec',
+        palette: ['#4b6761', '#9d5b45', '#726184', '#8b713b', '#515f83', '#8c5266'],
+        fontFamily: 'Georgia, serif', fontWeight: 400, titleWeight: 400
+    },
+    forest: {
+        background: '#102b26', foreground: '#e4f4df', axes: '#9ac6a5',
+        border: '#3c6152', muted: '#a3b9a5', tooltipBackground: '#193d34',
+        legendBackground: '#193d34ed', sliceLabel: '#173026',
+        palette: ['#b8da8e', '#75c8b0', '#f2ce8c', '#d8a6b3', '#9cbbdd', '#d4d9b0'],
+        fontFamily: 'Verdana, sans-serif', fontWeight: 400, titleWeight: 600
+    },
+    midnight: {
+        background: '#17142c', foreground: '#eeeaff', axes: '#b3a8df',
+        border: '#4a406a', muted: '#b5aacd', tooltipBackground: '#2a2244',
+        legendBackground: '#2a2244ed', sliceLabel: '#211831',
+        palette: ['#b5a1ff', '#ffadcc', '#81dfdf', '#ffd493', '#b3e897', '#aabfff'],
+        fontFamily: 'Georgia, serif', fontWeight: 400, titleWeight: 400
+    },
+    blueprint: {
+        background: '#123b62', foreground: '#e4f3ff', axes: '#a9d3ed',
+        border: '#537d9c', muted: '#b6d1e5', tooltipBackground: '#1a4b74',
+        legendBackground: '#1a4b74ed', sliceLabel: '#163552',
+        palette: ['#97d7ff', '#ffdf90', '#9be2c7', '#ffc3a4', '#d1c5ff', '#f3c1dd'],
+        fontFamily: 'ui-monospace, monospace', fontWeight: 400, titleWeight: 600
     }
 };
 
 function resolvedTheme(plot) {
     const theme = plot.getAttribute('theme');
-    if (theme === 'light' || theme === 'dark') return theme;
+    if (Object.hasOwn(presets, theme)) return theme;
     return plot.themePreference?.matches ? 'dark' : 'light';
 }
 
 function themeColors(plot) {
-    return {...palettes[resolvedTheme(plot)], ...plot.themeOverrides};
+    return {...presets[resolvedTheme(plot)], ...plot.themeOverrides};
 }
 
 function updateTheme(plot) {
-    if (!plot.themeToggle) return;
     const colors = themeColors(plot);
-    const dark = resolvedTheme(plot) === 'dark';
     plot.canvas.style.backgroundColor = colors.background;
     plot.canvas.style.borderColor = colors.border;
-    plot.themeToggle.style.backgroundColor = colors.background;
-    plot.themeToggle.style.color = colors.muted;
-    plot.themeToggle.style.borderColor = colors.border;
-    plot.themeToggle.textContent = dark ? 'Light' : 'Dark';
-    plot.themeToggle.setAttribute('aria-label', dark ? 'Use light chart theme' : 'Use dark chart theme');
-    plot.themeToggle.setAttribute('aria-pressed', String(dark));
-    plot.themeToggle.hidden = plot.getAttribute('show-theme-toggle') === 'false';
     if (plot.DPIHasBeenSet) plot.renderPlot();
 }
 
@@ -1374,26 +1406,10 @@ function initializeTheme(plot) {
     plot.themePreferenceChanged = () => {
         if (plot.theme === 'auto') updateTheme(plot);
     };
-    const style = document.createElement('style');
-    style.textContent = `
-        :host { position: relative; display: block; }
-        button { position: absolute; top: 6px; left: 6px; z-index: 1; padding: 3px 7px;
-          border: 1px solid; border-radius: 4px; cursor: pointer; font: 11px/1.4 system-ui; }
-        button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
-        button[hidden] { display: none; }
-    `;
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.addEventListener('click', () => {
-        plot.theme = resolvedTheme(plot) === 'dark' ? 'light' : 'dark';
-    });
-    plot.themeToggle = button;
-    plot.shadow.appendChild(style);
-    plot.shadow.appendChild(button);
     updateTheme(plot);
 }
 
-module.exports = {resolvedTheme, themeColors, updateTheme, initializeTheme};
+module.exports = {names: Object.keys(presets), resolvedTheme, themeColors, updateTheme, initializeTheme};
 
 },{}],5:[function(require,module,exports){
 let defaultColors = ["red", "green","orange", "blue", "purple", "yellow"];

@@ -112,7 +112,12 @@ export interface RichCanvasElement extends EasyCanvasElement {
   getDrawingContext(): CanvasRenderingContext2D;
   disposeRichRendering(): void;
 }
+export type ChartThemeName = 'light' | 'dark' | 'paper' | 'forest' | 'midnight' | 'blueprint';
 export interface ChartThemeColors {
+  fontFamily: string;
+  titleFontFamily?: string;
+  fontWeight: number | string;
+  titleWeight: number | string;
   background: string;
   foreground: string;
   axes: string;
@@ -124,8 +129,10 @@ export interface ChartThemeColors {
   palette: string[];
 }
 export interface EasyCanvasElement extends HTMLElement {
-  theme: 'auto' | 'light' | 'dark';
-  readonly resolvedTheme: 'light' | 'dark';
+  theme: 'auto' | ChartThemeName;
+  readonly availableThemes: ('auto' | ChartThemeName)[];
+  readonly resolvedTheme: ChartThemeName;
+  getFont(size?: number, kind?: 'body' | 'title'): string;
   get themeColors(): ChartThemeColors;
   set themeColors(value: Partial<ChartThemeColors> | null);
 

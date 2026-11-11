@@ -7,10 +7,18 @@ let {defaultColors, zip, defaultVal, defaultVals, dist, getTimeLabel} = helpers;
 
 
 // tools
+function textWidth(plot, text, font) {
+    plot.ctx.save();
+    plot.ctx.font = font;
+    const width = plot.ctx.measureText(String(text)).width;
+    plot.ctx.restore();
+    return width;
+}
+
 function drawTooltip(x,y,info){
     let padding = 10;
     let lineHeight = this.fontsize;
-    let letterWidth = this.fontsize / 2;
+
 
     let keys = Object.keys(info);
     let values = Object.values(info);
@@ -22,7 +30,10 @@ function drawTooltip(x,y,info){
     // find height and width
     let h = labels.length * lineHeight;
     h += padding * (labels.length+1);
-    let w = Math.max(...labels.map(pair => pair[0].length + pair[1].length))*letterWidth + 2*padding;
+    const labelFont = 'bold ' + this.fontsize + 'px ' + this.themeColors.fontFamily;
+    const valueFont = this.getFont();
+    const widths = labels.map(pair => [textWidth(this, pair[0], labelFont), textWidth(this, pair[1], valueFont)]);
+    let w = Math.max(...widths.map(pair => pair[0] + pair[1])) + 2 * padding;
 
     // move tooltip up and left if necessary.
     if(x+w > this.canvas.width){
@@ -52,12 +63,12 @@ function drawTooltip(x,y,info){
         let labelSettings = {x: x1, y: y1, textBaseline: "bottom"}
 
         labelSettings.text = label[0];
-        labelSettings.font = `bold ${this.fontsize}px Lato`;
+        labelSettings.font = labelFont;
         this.drawLabel(labelSettings);
         
-        labelSettings.x += (letterWidth*label[0].length);
+        labelSettings.x += widths[i][0];
         labelSettings.text = label[1];
-        labelSettings.font = `${this.fontsize}px Lato`;
+        labelSettings.font = valueFont;
         this.drawLabel(labelSettings);
     }
 }
@@ -67,13 +78,13 @@ function drawLegend(labels, settings){
     
     let padding = this.fontsize / 2;
     let lineHeight = this.fontsize;
-    let letterWidth = this.fontsize / 2;
+
     let patchSize = this.fontsize * (3/4);
 
     // Rectangle 
     let h = labels.length * lineHeight;
     h += padding * (labels.length+1);
-    let w = Math.max(...labels.map(v => v.text.length))*letterWidth + 3*padding + patchSize;
+    let w = Math.max(...labels.map(label => textWidth(this, label.text, this.getFont()))) + 3*padding + patchSize;
 
     let x = this.canvas.width - padding - w;
     let y = padding;
@@ -102,7 +113,7 @@ function drawLegend(labels, settings){
         // draw text
         x1 += (patchSize + padding);
         y1 += lineHeight;
-        this.drawLabel({text: label.text, x: x1, y: y1, font: `300 ${this.fontsize}px Lato`, textBaseline: "bottom"});
+        this.drawLabel({text: label.text, x: x1, y: y1, font: this.getFont(), textBaseline: "bottom"});
     }
 }
 
@@ -123,17 +134,17 @@ function drawLegendAxesLabelsAndTitle(settings){
     // draw title
     let titleX = this.canvas.width/2;
     let titleY = this.fontsize * 2.5;
-    this.drawLabel({text: title, x: titleX, y: titleY, font: `300 ${this.fontsize*2}px Lato`, textAlign: "center"});
+    this.drawLabel({text: title, x: titleX, y: titleY, font: this.getFont(this.fontsize * 2, 'title'), textAlign: "center"});
 
     // draw x-axis label
     let xLabelX = this.canvas.width/2;
     let xLabelY = this.canvas.height - (this.fontsize);
-    this.drawLabel({text: xLabel, x: xLabelX, y: xLabelY, font: `300 ${this.fontsize*2}px Lato`, textAlign: "center"});
+    this.drawLabel({text: xLabel, x: xLabelX, y: xLabelY, font: this.getFont(this.fontsize * 2, 'title'), textAlign: "center"});
 
     // draw y-axis label
     let yLabelX = this.fontsize*2;
     let yLabelY = this.canvas.height/2;
-    this.drawLabel({text: yLabel, x: yLabelX, y: yLabelY, theta: Math.PI/2, font: `300 ${this.fontsize*2}px Lato`, textAlign: "center"});
+    this.drawLabel({text: yLabel, x: yLabelX, y: yLabelY, theta: Math.PI/2, font: this.getFont(this.fontsize * 2, 'title'), textAlign: "center"});
 }
 
 

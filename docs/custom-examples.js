@@ -264,15 +264,47 @@ for (const [id, fn, title] of [
 }
 }
 {
-const plot = document.querySelector('#gallery-themes');
-plot.setAttribute('fontsize', '22');
-plot.theme = 'auto';
+const plots = ['theme-line', 'theme-bar', 'theme-donut'].map(id =>
+  document.getElementById(id));
+const picker = document.getElementById('theme-picker');
+
+for (const name of plots[0].availableThemes) {
+  picker.add(new Option(name === 'auto' ? 'Site / browser preference' : name, name));
+}
+function applyTheme() {
+  const theme = picker.value === 'auto'
+    ? document.documentElement.dataset.theme || 'auto'
+    : picker.value;
+  for (const plot of plots) plot.theme = theme;
+}
+picker.addEventListener('change', applyTheme);
+new MutationObserver(applyTheme).observe(document.documentElement, {
+  attributes: true, attributeFilter: ['data-theme']
+});
+applyTheme();
+
+for (const plot of plots) plot.setAttribute('fontsize', '22');
+
 const xs = Array.from({length: 61}, (_, i) => i / 10);
-plot.drawingLoop = () => plot.hotAndReady.linePlot({
-  xs, ys: xs.map(x => Math.sin(x) * 2 + Math.cos(x * 2))
-}, {title: 'Try light and dark', legendLabels: [], xTicks: 4});
-// Try plot.theme = 'dark';
-// Or plot.themeColors = {background: '#102b26', axes: '#8cd8c2'};
+plots[0].drawingLoop = () => plots[0].hotAndReady.linePlot({
+  xs, signal: xs.map(Math.sin), trend: xs.map(x => Math.cos(x) * 0.6)
+}, {
+  title: 'Line plot', inputs: ['xs', 'xs'], outputs: ['signal', 'trend'],
+  legendLabels: ['Signal', 'Trend'], xLabel: 'Input', yLabel: 'Value',
+  xTicks: 4, yTicks: 3
+});
+plots[1].drawingLoop = () => plots[1].hotAndReady.barPlot({
+  bars: ['A', 'B', 'C', 'D'], heights: [12, 19, 8, 15]
+}, {
+  title: 'Bar chart', xLabel: 'Category', yLabel: 'Count', legendLabels: []
+});
+plots[2].drawingLoop = () => plots[2].hotAndReady.donutChart({
+  values: [45, 32, 23], labels: ['Product', 'Support', 'Research']
+}, {title: 'Donut chart', showLabels: false});
+
+// For your own control, setting plot.theme is the only step needed.
+// Optional overrides:
+// plots[0].themeColors = {background: '#102b26', fontFamily: 'Georgia, serif'};
 
 }
 {

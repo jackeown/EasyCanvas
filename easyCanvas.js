@@ -60,8 +60,7 @@ class EasyCanvas extends HTMLElement {
             "default-axes-on",
             "controls",
             "fontsize",
-            "theme",
-            "show-theme-toggle"
+            "theme"
         ];
     }
     
@@ -265,12 +264,21 @@ class EasyCanvas extends HTMLElement {
 
     get theme() {
         const value = this.getAttribute('theme');
-        return value === 'light' || value === 'dark' ? value : 'auto';
+        return this.availableThemes.includes(value) ? value : 'auto';
     }
 
     set theme(value) {
-        if (!['auto', 'light', 'dark'].includes(value)) throw new RangeError('theme must be auto, light, or dark');
+        if (!this.availableThemes.includes(value)) throw new RangeError('Unknown theme: ' + value);
         this.setAttribute('theme', value);
+    }
+
+    get availableThemes() { return ['auto', ...chartTheme.names]; }
+
+    getFont(size = this.fontsize, kind = 'body') {
+        const style = this.themeColors;
+        const weight = kind === 'title' ? style.titleWeight : style.fontWeight;
+        const family = kind === 'title' ? style.titleFontFamily ?? style.fontFamily : style.fontFamily;
+        return weight + ' ' + size + 'px ' + family;
     }
 
     get resolvedTheme() { return chartTheme.resolvedTheme(this); }
@@ -307,7 +315,7 @@ class EasyCanvas extends HTMLElement {
         if(this.debug)
             console.log(`custom element attribute "${name}" has changed from "${oldValue}" to "${newValue}"`);
         
-        if (name === 'theme' || name === 'show-theme-toggle') {
+        if (name === 'theme') {
             chartTheme.updateTheme(this);
             return;
         }
@@ -440,25 +448,21 @@ class EasyCanvas extends HTMLElement {
     }
 
 
-    drawLabel(settings){
-        settings["theta"] = defaultVal(settings["theta"], 0);
-        settings["font"] = defaultVal(settings["font"], "20px Lato");
-        settings["textAlign"] = defaultVal(settings["textAlign"], "left");
-        settings["textBaseline"] = defaultVal(settings["textBaseline"], "alphabetic")
-
+    drawLabel(settings) {
+        const {
+            x, y, text, color, theta = 0, font = this.getFont(20),
+            textAlign = 'left', textBaseline = 'alphabetic'
+        } = settings;
         this.ctx.save();
-
-        if (settings.color) this.ctx.fillStyle = settings.color;
-        this.ctx.textBaseline = settings.textBaseline;
-        this.ctx.textAlign = settings.textAlign;
-        this.ctx.font = settings.font;
-        this.ctx.translate(settings.x, settings.y);
-        this.ctx.rotate(-settings.theta);
-        this.ctx.fillText(settings.text,0,0);
-
+        if (color) this.ctx.fillStyle = color;
+        this.ctx.textBaseline = textBaseline;
+        this.ctx.textAlign = textAlign;
+        this.ctx.font = font;
+        this.ctx.translate(x, y);
+        this.ctx.rotate(-theta);
+        this.ctx.fillText(text, 0, 0);
         this.ctx.restore();
     }
-
 
     drawAxis(settings){
         let {x1,y1,x2,y2} = settings
@@ -494,7 +498,7 @@ class EasyCanvas extends HTMLElement {
                 y: labelY, 
                 theta: labelTheta, 
                 textAlign: "center",
-                font: `${this.fontsize}px Lato`
+                font: this.getFont()
             };
             if(labels){
                 labelSettings.text = labels[i-1];
@@ -641,11 +645,3 @@ class EasyCanvas extends HTMLElement {
 }
 
 customElements.define('easy-canvas', EasyCanvas);
-
-
-// hack to dynamically load css for easy-canvas...
-var link = document.createElement('link');
-link.setAttribute('rel', 'stylesheet');
-link.setAttribute('type', 'text/css');
-link.setAttribute('href', 'https://fonts.googleapis.com/css?family=Lato:100,200,300,400,500,600');
-document.head.appendChild(link);

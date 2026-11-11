@@ -133,6 +133,49 @@ plot.drawingLoop = () => {
 };
 }
 {
+const plot = document.querySelector('#gallery-fractal-tree');
+plot.setAttribute('default-axes-on', 'false');
+plot.setAttribute('controls', 'false');
+plot.setAttribute('xpadding', '4');
+plot.setAttribute('ypadding', '4');
+plot.setAttribute('xmin', '-7');
+plot.setAttribute('xmax', '7');
+plot.setAttribute('ymin', '-1');
+plot.setAttribute('ymax', '11');
+const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const maxLevel = 8;
+plot.drawingLoop = () => {
+  const ctx = plot.ctx;
+  const lean = (plot.mouseX ?? 0) * 0.02;
+  const gust = still ? 0 : Math.sin(performance.now() / 900) * 0.012;
+  ctx.save();
+  ctx.fillStyle = '#111814';
+  ctx.fillRect(0, 0, plot.canvas.width, plot.canvas.height);
+  ctx.lineCap = 'round';
+  let leaves = 0;
+  const branch = (x, y, length, theta, level) => {
+    theta += lean + gust;
+    const tipX = x + length * Math.sin(theta);
+    const tipY = y + length * Math.cos(theta);
+    ctx.strokeStyle = `hsl(${24 + level * 14}, 42%, ${26 + level * 3}%)`;
+    plot.drawLine({xs: [x, tipX], ys: [y, tipY]}, 0.8 + (maxLevel - level) * 0.45);
+    if (level === maxLevel) {
+      ctx.fillStyle = `hsl(${104 + leaves % 44}, 62%, ${40 + leaves % 13}%)`;
+      leaves++;
+      ctx.beginPath();
+      plot.arc(tipX, tipY, 0.22, 0, 2 * Math.PI);
+      ctx.fill();
+    } else {
+      const spread = 0.34 + 0.03 * (maxLevel - level);
+      branch(tipX, tipY, length * 0.68, theta - spread, level + 1);
+      branch(tipX, tipY, length * 0.68, theta + spread, level + 1);
+    }
+  };
+  branch(0, -1, 2.7, 0, 0);
+  ctx.restore();
+};
+}
+{
 const plot = document.querySelector('#gallery-histogram');
 plot.setAttribute('fontsize', '24');
 const values = Array.from({length: 180}, (_, i) =>

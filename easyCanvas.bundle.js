@@ -1,6 +1,7 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 const hotAndReadyFuncs = require('./easyCanvasHotAndReady.js');
 const helpers = require('./helpers.js');
+const chartTheme = require('./easyCanvasTheme.js');
 
 let {defaultColors, zip, defaultVal, defaultVals, dist, getTimeLabel} = helpers;
 
@@ -59,7 +60,9 @@ class EasyCanvas extends HTMLElement {
             "ypadding",
             "default-axes-on",
             "controls",
-            "fontsize"
+            "fontsize",
+            "theme",
+            "show-theme-toggle"
         ];
     }
     
@@ -254,9 +257,37 @@ class EasyCanvas extends HTMLElement {
         this.hotAndReadyEventListeners = {};
 
 
+        chartTheme.initializeTheme(this);
+
         // Constantly be redrawing the plot at this.framerate
         this.renderPlotLoop();
 
+    }
+
+    get theme() {
+        const value = this.getAttribute('theme');
+        return value === 'light' || value === 'dark' ? value : 'auto';
+    }
+
+    set theme(value) {
+        if (!['auto', 'light', 'dark'].includes(value)) throw new RangeError('theme must be auto, light, or dark');
+        this.setAttribute('theme', value);
+    }
+
+    get resolvedTheme() { return chartTheme.resolvedTheme(this); }
+    get themeColors() { return chartTheme.themeColors(this); }
+    set themeColors(value) {
+        this.themeOverrides = value ? {...value} : {};
+        chartTheme.updateTheme(this);
+    }
+
+    connectedCallback() {
+        this.themePreference?.addEventListener('change', this.themePreferenceChanged);
+        chartTheme.updateTheme(this);
+    }
+
+    disconnectedCallback() {
+        this.themePreference?.removeEventListener('change', this.themePreferenceChanged);
     }
 
     saveScalesAndRanges(){
@@ -277,6 +308,11 @@ class EasyCanvas extends HTMLElement {
         if(this.debug)
             console.log(`custom element attribute "${name}" has changed from "${oldValue}" to "${newValue}"`);
         
+        if (name === 'theme' || name === 'show-theme-toggle') {
+            chartTheme.updateTheme(this);
+            return;
+        }
+
         // simple numeric
         if(["xmin", "xmax", "ymin", "ymax", "xpadding", "ypadding", "framerate", "fontsize"].includes(name)){
             this[name] = +newValue;
@@ -372,6 +408,13 @@ class EasyCanvas extends HTMLElement {
             
             this.updateScales();
             this.ctx.clearRect(0,0,this.canvas.width, this.canvas.height);
+            const theme = this.themeColors;
+            this.ctx.save();
+            this.ctx.fillStyle = theme.background;
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            this.ctx.restore();
+            this.ctx.strokeStyle = theme.axes;
+            this.ctx.fillStyle = theme.foreground;
             this.ctx.beginPath(); // clears any old path they may have made.
             
             if(this.drawingLoop){
@@ -406,6 +449,7 @@ class EasyCanvas extends HTMLElement {
 
         this.ctx.save();
 
+        if (settings.color) this.ctx.fillStyle = settings.color;
         this.ctx.textBaseline = settings.textBaseline;
         this.ctx.textAlign = settings.textAlign;
         this.ctx.font = settings.font;
@@ -428,6 +472,8 @@ class EasyCanvas extends HTMLElement {
 
         this.ctx.save();
         this.ctx.lineWidth = 2;
+        this.ctx.strokeStyle = settings.axisColor ?? this.themeColors.axes;
+        this.ctx.fillStyle = settings.textColor ?? this.themeColors.foreground;
         this.ctx.beginPath();
         this.ctx.moveTo(parseInt(this.scaleX(x1)), parseInt(this.scaleY(y1)));
         this.ctx.lineTo(parseInt(this.scaleX(x2)), parseInt(this.scaleY(y2)));
@@ -499,6 +545,7 @@ class EasyCanvas extends HTMLElement {
             scaleStart: this.xmin,
             scaleEnd: this.xmax,
             isDatetime: xAxisIsTime,
+            axisColor: settings.axisColor, textColor: settings.textColor,
             tickFormat: settings.xTickFormat,
             locale: settings.locale, timeZone: settings.timeZone, timeFormat: settings.timeFormat
         })
@@ -518,6 +565,7 @@ class EasyCanvas extends HTMLElement {
             scaleStart: this.ymin,
             scaleEnd: this.ymax,
             isDatetime: yAxisIsTime,
+            axisColor: settings.axisColor, textColor: settings.textColor,
             tickFormat: settings.yTickFormat,
             locale: settings.locale, timeZone: settings.timeZone, timeFormat: settings.timeFormat
         })
@@ -602,9 +650,7 @@ link.setAttribute('rel', 'stylesheet');
 link.setAttribute('type', 'text/css');
 link.setAttribute('href', 'https://fonts.googleapis.com/css?family=Lato:100,200,300,400,500,600');
 document.head.appendChild(link);
-},{"./easyCanvasHotAndReady.js":3,"./helpers.js":4}],2:[function(require,module,exports){
-const defaultColors = ['#789beb', '#ef9c75', '#6dbba9', '#c2a2de', '#ecc36e', '#e4a3b0'];
-
+},{"./easyCanvasHotAndReady.js":3,"./easyCanvasTheme.js":4,"./helpers.js":5}],2:[function(require,module,exports){
 const chartBounds = new WeakMap();
 const finite = value => typeof value === 'number' && Number.isFinite(value);
 
@@ -618,8 +664,8 @@ function extent(values) {
     return min === max ? [min - Math.max(0.5, Math.abs(min) * 0.01), max + Math.max(0.5, Math.abs(max) * 0.01)] : [min, max];
 }
 
-function color(settings, index = 0) {
-    const colors = settings.colors?.length ? settings.colors : defaultColors;
+function color(plot, settings, index = 0) {
+    const colors = settings.colors?.length ? settings.colors : plot.themeColors.palette;
     return settings.color ?? colors[index % colors.length];
 }
 
@@ -643,8 +689,8 @@ function cartesian(plot, kind, bounds, settings, draw, decorate) {
     plot.ctx.save();
     try {
         draw();
-        plot.ctx.fillStyle = '#20272c';
-        plot.ctx.strokeStyle = '#20272c';
+        plot.ctx.fillStyle = plot.themeColors.foreground;
+        plot.ctx.strokeStyle = plot.themeColors.axes;
         if (settings.axes !== false) plot.drawDefaultAxes(settings);
         decorate.call(plot, {title: '', xLabel: '', yLabel: '', legendLabels: [], ...settings});
     } finally {
@@ -680,7 +726,7 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
         }));
         const gap = Math.max(0, Math.min(0.9, settings.gap ?? 0.06)) * width / 2;
         cartesian(this, 'histogram', [min, max, 0, Math.max(...bars.map(bar => bar.height), settings.density ? Number.EPSILON : 1) * 1.08], settings, () => {
-            this.ctx.fillStyle = color(settings);
+            this.ctx.fillStyle = color(this, settings);
             for (const bar of bars) pixelRect(this, bar.min + gap, 0, bar.max - gap, bar.height);
         }, decorate);
         return bars;
@@ -729,14 +775,14 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
                 if (inner) ctx.arc(x, y, inner, end, angle, true);
                 else ctx.lineTo(x, y);
                 ctx.closePath();
-                ctx.fillStyle = color(settings, index);
+                ctx.fillStyle = color(this, settings, index);
                 ctx.fill();
                 const overSlice = distanceToMouse <= radius && distanceToMouse > inner &&
                     pointerAngle >= angle - startAngle && pointerAngle < end - startAngle;
                 if (overSlice) {
                     hovered = {index, value, fraction};
                     ctx.save();
-                    ctx.strokeStyle = '#20272c';
+                    ctx.strokeStyle = this.themeColors.axes;
                     ctx.lineWidth = 2 * this.dpr;
                     ctx.stroke();
                     ctx.restore();
@@ -744,7 +790,7 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
                 if (settings.showLabels !== false && fraction >= 0.04) {
                     const mid = (angle + end) / 2;
                     const distance = (radius + inner) * 0.57;
-                    ctx.fillStyle = settings.labelColor ?? '#20272c';
+                    ctx.fillStyle = settings.labelColor ?? this.themeColors.sliceLabel;
                     this.drawLabel({
                         text: settings.labelFormatter?.(value, index, fraction) ?? labels[index] ?? (fraction * 100).toFixed(0) + '%',
                         x: x + distance * Math.cos(mid), y: y + distance * Math.sin(mid),
@@ -753,10 +799,10 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
                 }
                 angle = end;
             }
-            ctx.fillStyle = '#20272c';
+            ctx.fillStyle = this.themeColors.foreground;
             decorate.call(this, {
                 title: '', xLabel: '', yLabel: '', ...settings,
-                colors: values.map((_, index) => color(settings, index)), legendLabels
+                colors: values.map((_, index) => color(this, settings, index)), legendLabels
             });
             if (hovered && settings.showTooltips !== false) {
                 const {index, value, fraction} = hovered;
@@ -801,9 +847,9 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
             for (const [i, box] of summaries.entries()) {
                 const x = i + 1;
                 const half = Math.max(0.05, Math.min(0.48, (settings.boxWidth ?? 0.55) / 2));
-                this.ctx.fillStyle = color(settings, i);
+                this.ctx.fillStyle = color(this, settings, i);
                 pixelRect(this, x - half, box.q1, x + half, box.q3);
-                this.ctx.strokeStyle = '#20272c';
+                this.ctx.strokeStyle = this.themeColors.axes;
                 this.drawLine({xs: [x, x], ys: [box.low, box.q1]});
                 this.drawLine({xs: [x, x], ys: [box.q3, box.high]});
                 for (const y of [box.low, box.median, box.high]) this.drawLine({xs: [x - half, x + half], ys: [y, y]});
@@ -827,7 +873,7 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
         const points = paired(data);
         if (!points.length) return;
         cartesian(this, 'scatter', [...extent(points.map(p => p.x)), ...extent(points.map(p => p.y))], settings, () => {
-            this.ctx.fillStyle = color(settings);
+            this.ctx.fillStyle = color(this, settings);
             this.ctx.globalAlpha = settings.opacity ?? 0.8;
             for (const {x, y, index} of points) {
                 const radius = data.radii?.[index] ?? settings.radius ?? 4;
@@ -845,7 +891,7 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
         if (!points.length) return;
         const baseline = settings.baseline ?? 0;
         cartesian(this, 'area', [...extent(points.map(p => p.x)), ...extent([baseline, ...points.map(p => p.y)])], settings, () => {
-            this.ctx.fillStyle = color(settings);
+            this.ctx.fillStyle = color(this, settings);
             this.ctx.globalAlpha = settings.opacity ?? 0.26;
             this.ctx.beginPath();
             this.ctx.moveTo(this.scaleX(points[0].x), this.scaleY(baseline));
@@ -854,7 +900,7 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
             this.ctx.closePath();
             this.ctx.fill();
             this.ctx.globalAlpha = 1;
-            this.ctx.strokeStyle = color(settings);
+            this.ctx.strokeStyle = color(this, settings);
             this.drawLine({xs: points.map(p => p.x), ys: points.map(p => p.y)}, settings.lineWidth ?? 2);
         }, decorate);
     }
@@ -919,12 +965,15 @@ function drawTooltip(x,y,info){
 
     // Draw Rectangle 
     this.ctx.save();
-    this.ctx.fillStyle="rgba(255,255,255,0.75)";
+    this.ctx.fillStyle = this.themeColors.tooltipBackground;
+    this.ctx.strokeStyle = this.themeColors.border;
     this.ctx.beginPath();
     this.ctx.rect(x, y, w, h);
     this.ctx.stroke();
     this.ctx.fill();
     this.ctx.restore();
+
+    this.ctx.fillStyle = this.themeColors.foreground;
 
     // draw text for individual labels
     for(let [i, label] of labels.entries()){
@@ -960,12 +1009,13 @@ function drawLegend(labels, settings){
     let x = this.canvas.width - padding - w;
     let y = padding;
 
-    this.ctx.fillStyle="rgba(255,255,255,0.7)";
+    this.ctx.fillStyle = this.themeColors.legendBackground;
+    this.ctx.strokeStyle = this.themeColors.border;
     this.ctx.beginPath();
     this.ctx.rect(x, y, w, h);
     this.ctx.stroke();
     this.ctx.fill();
-    this.ctx.fillStyle="black";
+    this.ctx.fillStyle = this.themeColors.foreground;
     
     
     // Individual labels
@@ -978,7 +1028,7 @@ function drawLegend(labels, settings){
         this.ctx.rect(x1, y1, patchSize, patchSize);
         this.ctx.stroke();
         this.ctx.fill();
-        this.ctx.fillStyle="black";
+        this.ctx.fillStyle = this.themeColors.foreground;
 
         // draw text
         x1 += (patchSize + padding);
@@ -992,7 +1042,7 @@ function drawLegendAxesLabelsAndTitle(settings){
     let xLabel = defaultVal(settings.xLabel, "x");
     let yLabel = defaultVal(settings.yLabel, "y");
     let legendLabels = defaultVal(settings.legendLabels, ["y"]);
-    let colors = defaultVal(settings.colors, defaultColors);
+    let colors = defaultVal(settings.colors, this.themeColors.palette);
 
     // draw legend
     legendLabels = legendLabels.map((field,i) => {
@@ -1120,7 +1170,7 @@ function linePlot(data, settings){
     let inputs = defaultVal(settings.inputs, ["xs"]);
     let outputs = defaultVal(settings.outputs, ["ys"]);
     let autoScale = defaultVal(settings.autoScale, true);
-    let colors = defaultVal(settings.colors, defaultColors);
+    let colors = defaultVal(settings.colors, this.themeColors.palette);
     let lineWidth = defaultVal(settings.lineWidth, 2);
     let tooltips = defaultVal(settings.tooltips, []);
     let xTicks = defaultVal(settings.xTicks, parseInt(this.canvas.width /120));
@@ -1159,7 +1209,7 @@ function linePlot(data, settings){
     }
 
 
-    this.ctx.strokeStyle="black";
+    this.ctx.strokeStyle = this.themeColors.axes;
 
     // use axes information sent to linePlot and not the default
     // axes of easyCanvas.
@@ -1209,7 +1259,7 @@ function linePlot(data, settings){
 
 function barPlot(data, settings){
     let autoScale = defaultVal(settings.autoScale,true)
-    let colors = defaultVal(settings.colors, defaultColors);
+    let colors = defaultVal(settings.colors, this.themeColors.palette);
 
     if(autoScale){
         rescaleAxes.bind(this)(0,1,0,Math.max(...data.heights))
@@ -1257,7 +1307,7 @@ function barPlot(data, settings){
         this.ctx.fill();
     }
     this.ctx.lineWidth=1;
-    this.ctx.fillStyle = "black";
+    this.ctx.fillStyle = this.themeColors.foreground;
     
     if(this.defaultAxesOn){
         this.setAttribute("default-axes-on","false");
@@ -1277,7 +1327,75 @@ module.exports = {
     ...require('./easyCanvasCharts.js')(drawLegendAxesLabelsAndTitle, drawTooltip)
 };
 
-},{"./easyCanvasCharts.js":2,"./helpers.js":4}],4:[function(require,module,exports){
+},{"./easyCanvasCharts.js":2,"./helpers.js":5}],4:[function(require,module,exports){
+const palettes = {
+    light: {
+        background: '#ffffff', foreground: '#20272c', axes: '#394553',
+        border: '#cbd2dc', muted: '#596778', tooltipBackground: 'rgba(255,255,255,0.96)',
+        legendBackground: 'rgba(255,255,255,0.9)', sliceLabel: '#ffffff',
+        palette: ['#2457dc', '#c54b2b', '#168574', '#744bb4', '#956b00', '#b44772']
+    },
+    dark: {
+        background: '#171e2a', foreground: '#e7edf7', axes: '#b6c5dc',
+        border: '#46536a', muted: '#afbdd2', tooltipBackground: 'rgba(28,38,55,0.97)',
+        legendBackground: 'rgba(28,38,55,0.92)', sliceLabel: '#17202b',
+        palette: ['#91b6ff', '#ffb394', '#8cddc7', '#cdb2ff', '#f4d181', '#f3accb']
+    }
+};
+
+function resolvedTheme(plot) {
+    const theme = plot.getAttribute('theme');
+    if (theme === 'light' || theme === 'dark') return theme;
+    return plot.themePreference?.matches ? 'dark' : 'light';
+}
+
+function themeColors(plot) {
+    return {...palettes[resolvedTheme(plot)], ...plot.themeOverrides};
+}
+
+function updateTheme(plot) {
+    if (!plot.themeToggle) return;
+    const colors = themeColors(plot);
+    const dark = resolvedTheme(plot) === 'dark';
+    plot.canvas.style.backgroundColor = colors.background;
+    plot.canvas.style.borderColor = colors.border;
+    plot.themeToggle.style.backgroundColor = colors.background;
+    plot.themeToggle.style.color = colors.muted;
+    plot.themeToggle.style.borderColor = colors.border;
+    plot.themeToggle.textContent = dark ? 'Light' : 'Dark';
+    plot.themeToggle.setAttribute('aria-label', dark ? 'Use light chart theme' : 'Use dark chart theme');
+    plot.themeToggle.setAttribute('aria-pressed', String(dark));
+    plot.themeToggle.hidden = plot.getAttribute('show-theme-toggle') === 'false';
+    if (plot.DPIHasBeenSet) plot.renderPlot();
+}
+
+function initializeTheme(plot) {
+    plot.themePreference = window.matchMedia?.('(prefers-color-scheme: dark)');
+    plot.themePreferenceChanged = () => {
+        if (plot.theme === 'auto') updateTheme(plot);
+    };
+    const style = document.createElement('style');
+    style.textContent = `
+        :host { position: relative; display: block; }
+        button { position: absolute; top: 6px; left: 6px; z-index: 1; padding: 3px 7px;
+          border: 1px solid; border-radius: 4px; cursor: pointer; font: 11px/1.4 system-ui; }
+        button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+        button[hidden] { display: none; }
+    `;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.addEventListener('click', () => {
+        plot.theme = resolvedTheme(plot) === 'dark' ? 'light' : 'dark';
+    });
+    plot.themeToggle = button;
+    plot.shadow.appendChild(style);
+    plot.shadow.appendChild(button);
+    updateTheme(plot);
+}
+
+module.exports = {resolvedTheme, themeColors, updateTheme, initializeTheme};
+
+},{}],5:[function(require,module,exports){
 let defaultColors = ["red", "green","orange", "blue", "purple", "yellow"];
 
 function zip(xs,ys){

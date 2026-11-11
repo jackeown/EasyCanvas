@@ -248,3 +248,41 @@ plot.drawingLoop = () => plot.hotAndReady.heatmap(grid, {
   colorScale: (_, fraction) => `hsl(${245 - 200 * fraction}, 72%, ${28 + 45 * fraction}%)`
 });
 }
+{
+const shared = {};
+const xs = Array.from({length: 121}, (_, i) => i / 10);
+for (const [id, fn, title] of [
+  ['gallery-linked-one', Math.sin, 'Sine'],
+  ['gallery-linked-two', Math.cos, 'Cosine']
+]) {
+  const plot = document.getElementById(id);
+  plot.setAttribute('fontsize', '20');
+  plot.linkInfo(['xmin', 'xmax'], shared);
+  plot.drawingLoop = () => plot.hotAndReady.linePlot({
+    xs, ys: xs.map(fn)
+  }, {title, legendLabels: [], xTicks: 4, yTicks: 3});
+}
+}
+{
+const plot = document.querySelector('#gallery-themes');
+plot.setAttribute('fontsize', '22');
+plot.theme = 'auto';
+const xs = Array.from({length: 61}, (_, i) => i / 10);
+plot.drawingLoop = () => plot.hotAndReady.linePlot({
+  xs, ys: xs.map(x => Math.sin(x) * 2 + Math.cos(x * 2))
+}, {title: 'Try light and dark', legendLabels: [], xTicks: 4});
+// Try plot.theme = 'dark';
+// Or plot.themeColors = {background: '#102b26', axes: '#8cd8c2'};
+
+}
+{
+const plot = document.querySelector('#gallery-controls');
+plot.setAttribute('fontsize', '22');
+const xs = Array.from({length: 181}, (_, i) => i / 12);
+plot.drawingLoop = () => plot.hotAndReady.linePlot({
+  xs, ys: xs.map(x => Math.sin(x) + 0.16 * x)
+}, {
+  title: 'Explore the curve', xLabel: 'x', yLabel: 'y',
+  legendLabels: [], xTicks: 5, yTicks: 4
+});
+}

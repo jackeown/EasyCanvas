@@ -108,5 +108,5 @@ plot.drawingLoop = () => {
 };
 }
 
-const guideSections = ['start', 'line-plots', 'bar-plots', 'linked', 'custom-drawing', 'animation-updates', 'time-axes', 'typescript', 'reference', 'notes'];
+const guideSections = ['features', 'themes', 'controls', 'start', 'line-plots', 'bar-plots', 'linked', 'custom-drawing', 'animation-updates', 'time-axes', 'typescript', 'reference', 'notes'];
 if (guideSections.includes(location.hash.slice(1))) location.replace('guide.html' + location.hash);

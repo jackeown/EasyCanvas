@@ -10,6 +10,7 @@ const elements = new Map();
 let strokes = 0;
 let fills = 0;
 const textLabels = [];
+const fillColors = [];
 const coordinateMethods = new Set(['moveTo', 'lineTo', 'translate', 'rotate', 'clearRect', 'rect', 'fillRect', 'arc']);
 const ctx = new Proxy({}, {
   get(target, key) {
@@ -17,7 +18,7 @@ const ctx = new Proxy({}, {
       if (coordinateMethods.has(key)) for (const n of (key === 'arc' ? args.slice(0, 5) : args)) assert.ok(Number.isFinite(n), `${key}: finite coordinate, got ${n}`);
       if (key === 'fillText') textLabels.push(String(args[0]));
       if (key === 'stroke') strokes++;
-      if (key === 'fill' || key === 'fillRect') fills++;
+      if (key === 'fill' || key === 'fillRect') { fills++; fillColors.push(target.fillStyle); }
     };
     return target[key];
   }
@@ -71,7 +72,7 @@ custom.mouseX = 0; custom.mouseY = 0;
 assert.equal(custom.mouseInCircle(0,0,0.6), true);
 assert.equal(custom.mouseInRect(-1,-1,1,1), true);
 custom.renderPlot();
-assert.equal(custom.ctx.fillStyle, '#df6846');
+assert.ok(fillColors.includes('#df6846'));
 vm.runInContext(`{${snippets.quick.match(/<script>\n([\s\S]*?)<\/script>/)[1]}}`, sandbox);
 console.log('PASS: committed bundle runs all six examples, draws finite paths, links axes, hit-tests, and runs pure-JS quick start.');
 
@@ -212,3 +213,36 @@ textLabels.length = 0;
 pie.renderPlot();
 assert.ok(!textLabels.includes('Rent'), 'Legend can be disabled independently');
 console.log('PASS: pie legends, optional labels and tooltips, custom tooltip text, and donut hit testing.');
+
+const themeListeners = new Set();
+const preference = {
+    matches: false,
+    addEventListener(type, callback) { themeListeners.add(callback); },
+    removeEventListener(type, callback) { themeListeners.delete(callback); }
+};
+sandbox.window.matchMedia = () => preference;
+const themed = document.createElement('easy-canvas');
+themed.debug = false;
+themed.connectedCallback();
+assert.equal(themed.theme, 'auto');
+assert.equal(themed.resolvedTheme, 'light');
+preference.matches = true;
+for (const listener of themeListeners) listener();
+assert.equal(themed.resolvedTheme, 'dark');
+assert.equal(themed.canvas.style.backgroundColor, themed.themeColors.background);
+themed.theme = 'light';
+for (const listener of themeListeners) listener();
+assert.equal(themed.resolvedTheme, 'light', 'Explicit theme overrides browser preference');
+themed.themeColors = {background:'#102b26', axes:'#8cd8c2', palette:['#ff1234']};
+assert.equal(themed.themeColors.background, '#102b26');
+assert.equal(themed.themeColors.axes, '#8cd8c2');
+themed.drawingLoop = () => themed.hotAndReady.scatterPlot({xs:[1,2],ys:[3,4]});
+themed.fixDPI();
+assert.ok(fillColors.includes('#102b26') && fillColors.includes('#ff1234'));
+themed.themeColors = null;
+assert.notEqual(themed.themeColors.background, '#102b26');
+themed.theme = 'auto';
+assert.equal(themed.resolvedTheme, 'dark');
+themed.disconnectedCallback();
+assert.equal(themeListeners.size, 0, 'Detached graphs release their browser preference listener');
+console.log('PASS: browser theme preference, explicit modes, color overrides, and listener cleanup.');

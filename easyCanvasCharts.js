@@ -1,5 +1,3 @@
-const defaultColors = ['#789beb', '#ef9c75', '#6dbba9', '#c2a2de', '#ecc36e', '#e4a3b0'];
-
 const chartBounds = new WeakMap();
 const finite = value => typeof value === 'number' && Number.isFinite(value);
 
@@ -13,8 +11,8 @@ function extent(values) {
     return min === max ? [min - Math.max(0.5, Math.abs(min) * 0.01), max + Math.max(0.5, Math.abs(max) * 0.01)] : [min, max];
 }
 
-function color(settings, index = 0) {
-    const colors = settings.colors?.length ? settings.colors : defaultColors;
+function color(plot, settings, index = 0) {
+    const colors = settings.colors?.length ? settings.colors : plot.themeColors.palette;
     return settings.color ?? colors[index % colors.length];
 }
 
@@ -38,8 +36,8 @@ function cartesian(plot, kind, bounds, settings, draw, decorate) {
     plot.ctx.save();
     try {
         draw();
-        plot.ctx.fillStyle = '#20272c';
-        plot.ctx.strokeStyle = '#20272c';
+        plot.ctx.fillStyle = plot.themeColors.foreground;
+        plot.ctx.strokeStyle = plot.themeColors.axes;
         if (settings.axes !== false) plot.drawDefaultAxes(settings);
         decorate.call(plot, {title: '', xLabel: '', yLabel: '', legendLabels: [], ...settings});
     } finally {
@@ -75,7 +73,7 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
         }));
         const gap = Math.max(0, Math.min(0.9, settings.gap ?? 0.06)) * width / 2;
         cartesian(this, 'histogram', [min, max, 0, Math.max(...bars.map(bar => bar.height), settings.density ? Number.EPSILON : 1) * 1.08], settings, () => {
-            this.ctx.fillStyle = color(settings);
+            this.ctx.fillStyle = color(this, settings);
             for (const bar of bars) pixelRect(this, bar.min + gap, 0, bar.max - gap, bar.height);
         }, decorate);
         return bars;
@@ -124,14 +122,14 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
                 if (inner) ctx.arc(x, y, inner, end, angle, true);
                 else ctx.lineTo(x, y);
                 ctx.closePath();
-                ctx.fillStyle = color(settings, index);
+                ctx.fillStyle = color(this, settings, index);
                 ctx.fill();
                 const overSlice = distanceToMouse <= radius && distanceToMouse > inner &&
                     pointerAngle >= angle - startAngle && pointerAngle < end - startAngle;
                 if (overSlice) {
                     hovered = {index, value, fraction};
                     ctx.save();
-                    ctx.strokeStyle = '#20272c';
+                    ctx.strokeStyle = this.themeColors.axes;
                     ctx.lineWidth = 2 * this.dpr;
                     ctx.stroke();
                     ctx.restore();
@@ -139,7 +137,7 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
                 if (settings.showLabels !== false && fraction >= 0.04) {
                     const mid = (angle + end) / 2;
                     const distance = (radius + inner) * 0.57;
-                    ctx.fillStyle = settings.labelColor ?? '#20272c';
+                    ctx.fillStyle = settings.labelColor ?? this.themeColors.sliceLabel;
                     this.drawLabel({
                         text: settings.labelFormatter?.(value, index, fraction) ?? labels[index] ?? (fraction * 100).toFixed(0) + '%',
                         x: x + distance * Math.cos(mid), y: y + distance * Math.sin(mid),
@@ -148,10 +146,10 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
                 }
                 angle = end;
             }
-            ctx.fillStyle = '#20272c';
+            ctx.fillStyle = this.themeColors.foreground;
             decorate.call(this, {
                 title: '', xLabel: '', yLabel: '', ...settings,
-                colors: values.map((_, index) => color(settings, index)), legendLabels
+                colors: values.map((_, index) => color(this, settings, index)), legendLabels
             });
             if (hovered && settings.showTooltips !== false) {
                 const {index, value, fraction} = hovered;
@@ -196,9 +194,9 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
             for (const [i, box] of summaries.entries()) {
                 const x = i + 1;
                 const half = Math.max(0.05, Math.min(0.48, (settings.boxWidth ?? 0.55) / 2));
-                this.ctx.fillStyle = color(settings, i);
+                this.ctx.fillStyle = color(this, settings, i);
                 pixelRect(this, x - half, box.q1, x + half, box.q3);
-                this.ctx.strokeStyle = '#20272c';
+                this.ctx.strokeStyle = this.themeColors.axes;
                 this.drawLine({xs: [x, x], ys: [box.low, box.q1]});
                 this.drawLine({xs: [x, x], ys: [box.q3, box.high]});
                 for (const y of [box.low, box.median, box.high]) this.drawLine({xs: [x - half, x + half], ys: [y, y]});
@@ -222,7 +220,7 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
         const points = paired(data);
         if (!points.length) return;
         cartesian(this, 'scatter', [...extent(points.map(p => p.x)), ...extent(points.map(p => p.y))], settings, () => {
-            this.ctx.fillStyle = color(settings);
+            this.ctx.fillStyle = color(this, settings);
             this.ctx.globalAlpha = settings.opacity ?? 0.8;
             for (const {x, y, index} of points) {
                 const radius = data.radii?.[index] ?? settings.radius ?? 4;
@@ -240,7 +238,7 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
         if (!points.length) return;
         const baseline = settings.baseline ?? 0;
         cartesian(this, 'area', [...extent(points.map(p => p.x)), ...extent([baseline, ...points.map(p => p.y)])], settings, () => {
-            this.ctx.fillStyle = color(settings);
+            this.ctx.fillStyle = color(this, settings);
             this.ctx.globalAlpha = settings.opacity ?? 0.26;
             this.ctx.beginPath();
             this.ctx.moveTo(this.scaleX(points[0].x), this.scaleY(baseline));
@@ -249,7 +247,7 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
             this.ctx.closePath();
             this.ctx.fill();
             this.ctx.globalAlpha = 1;
-            this.ctx.strokeStyle = color(settings);
+            this.ctx.strokeStyle = color(this, settings);
             this.drawLine({xs: points.map(p => p.x), ys: points.map(p => p.y)}, settings.lineWidth ?? 2);
         }, decorate);
     }

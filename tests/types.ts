@@ -22,3 +22,7 @@ const timeSettings: LinePlotSettings = {
   tooltipFormatters: {temperature: (value, index) => `${index}: ${value.toFixed(1)} °C`}
 };
 plot.drawDefaultAxes(timeSettings);
+plot.theme = 'dark';
+plot.themeColors = {background:'#102b26', axes:'#8cd8c2', palette:['#91b6ff']};
+plot.drawDefaultAxes({axisColor:'#8cd8c2', textColor:'#e5fff5'});
+plot.themeColors = null;

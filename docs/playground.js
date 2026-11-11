@@ -57,8 +57,8 @@
         const code = example.code.replace(/(const plot = document\.querySelector\([^\n]+\);)(?!\nplot\.setAttribute\('fontsize')/, "$1\nplot.setAttribute('fontsize', '24');");
         source = {
             js: code,
-            html: '<easy-canvas id="' + id + '"></easy-canvas>',
-            css: 'body { margin: 12px; background: #fff; }\neasy-canvas { display: block; width: 100%; height: 370px; }'
+            html: example.html ?? '<easy-canvas id="' + id + '"></easy-canvas>',
+            css: example.css ?? 'body { margin: 12px; }\neasy-canvas { display: block; width: 100%; height: 370px; }'
         };
         description.textContent = example.description;
         editor.value = source[language.value];
@@ -112,9 +112,10 @@
     Promise.all([
         load('docs/snippets.json', 'json'),
         load('docs/custom-examples.json', 'json'),
+        load('docs/feature-examples.json', 'json'),
         load('easyCanvas.bundle.js', 'text'),
         load('easyCanvasRichText.js', 'text')
-    ]).then(([snippets, extra, library, addon]) => {
+    ]).then(([snippets, extra, features, library, addon]) => {
         runtime = library + '\n' + addon;
         const originals = {
             lines: ['line', 'Line plot', 'Compare two series with the same x coordinates.'],
@@ -125,7 +126,7 @@
         };
         examples = Object.fromEntries(Object.entries(originals).map(([id, [key, title, description]]) =>
             [id, {title, description, code: snippets[key], element: id}]));
-        for (const [id, example] of Object.entries(extra)) examples[id] = {...example, element: 'gallery-' + id};
+        for (const [id, example] of Object.entries({...extra, ...features})) examples[id] = {...example, element: 'gallery-' + id};
         for (const [id, example] of Object.entries(examples)) preset.add(new Option(example.title, id));
         const requested = new URLSearchParams(location.search).get('example');
         preset.value = Object.hasOwn(examples, requested) ? requested : 'lines';

@@ -34,12 +34,15 @@ function drawTooltip(x,y,info){
 
     // Draw Rectangle 
     this.ctx.save();
-    this.ctx.fillStyle="rgba(255,255,255,0.75)";
+    this.ctx.fillStyle = this.themeColors.tooltipBackground;
+    this.ctx.strokeStyle = this.themeColors.border;
     this.ctx.beginPath();
     this.ctx.rect(x, y, w, h);
     this.ctx.stroke();
     this.ctx.fill();
     this.ctx.restore();
+
+    this.ctx.fillStyle = this.themeColors.foreground;
 
     // draw text for individual labels
     for(let [i, label] of labels.entries()){
@@ -75,12 +78,13 @@ function drawLegend(labels, settings){
     let x = this.canvas.width - padding - w;
     let y = padding;
 
-    this.ctx.fillStyle="rgba(255,255,255,0.7)";
+    this.ctx.fillStyle = this.themeColors.legendBackground;
+    this.ctx.strokeStyle = this.themeColors.border;
     this.ctx.beginPath();
     this.ctx.rect(x, y, w, h);
     this.ctx.stroke();
     this.ctx.fill();
-    this.ctx.fillStyle="black";
+    this.ctx.fillStyle = this.themeColors.foreground;
     
     
     // Individual labels
@@ -93,7 +97,7 @@ function drawLegend(labels, settings){
         this.ctx.rect(x1, y1, patchSize, patchSize);
         this.ctx.stroke();
         this.ctx.fill();
-        this.ctx.fillStyle="black";
+        this.ctx.fillStyle = this.themeColors.foreground;
 
         // draw text
         x1 += (patchSize + padding);
@@ -107,7 +111,7 @@ function drawLegendAxesLabelsAndTitle(settings){
     let xLabel = defaultVal(settings.xLabel, "x");
     let yLabel = defaultVal(settings.yLabel, "y");
     let legendLabels = defaultVal(settings.legendLabels, ["y"]);
-    let colors = defaultVal(settings.colors, defaultColors);
+    let colors = defaultVal(settings.colors, this.themeColors.palette);
 
     // draw legend
     legendLabels = legendLabels.map((field,i) => {
@@ -235,7 +239,7 @@ function linePlot(data, settings){
     let inputs = defaultVal(settings.inputs, ["xs"]);
     let outputs = defaultVal(settings.outputs, ["ys"]);
     let autoScale = defaultVal(settings.autoScale, true);
-    let colors = defaultVal(settings.colors, defaultColors);
+    let colors = defaultVal(settings.colors, this.themeColors.palette);
     let lineWidth = defaultVal(settings.lineWidth, 2);
     let tooltips = defaultVal(settings.tooltips, []);
     let xTicks = defaultVal(settings.xTicks, parseInt(this.canvas.width /120));
@@ -274,7 +278,7 @@ function linePlot(data, settings){
     }
 
 
-    this.ctx.strokeStyle="black";
+    this.ctx.strokeStyle = this.themeColors.axes;
 
     // use axes information sent to linePlot and not the default
     // axes of easyCanvas.
@@ -324,7 +328,7 @@ function linePlot(data, settings){
 
 function barPlot(data, settings){
     let autoScale = defaultVal(settings.autoScale,true)
-    let colors = defaultVal(settings.colors, defaultColors);
+    let colors = defaultVal(settings.colors, this.themeColors.palette);
 
     if(autoScale){
         rescaleAxes.bind(this)(0,1,0,Math.max(...data.heights))
@@ -372,7 +376,7 @@ function barPlot(data, settings){
         this.ctx.fill();
     }
     this.ctx.lineWidth=1;
-    this.ctx.fillStyle = "black";
+    this.ctx.fillStyle = this.themeColors.foreground;
     
     if(this.defaultAxesOn){
         this.setAttribute("default-axes-on","false");

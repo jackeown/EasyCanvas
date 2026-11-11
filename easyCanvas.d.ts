@@ -34,6 +34,7 @@ export interface LinePlotSettings extends PlotLabels, TimeAxisOptions {
 export type LinePlotData = Record<string, number[]>;
 export interface BarPlotData { bars: string[]; heights: number[]; }
 export interface LabelSettings {
+  color?: string;
   x: number; y: number; text: string;
   theta?: number;
   font?: string;
@@ -41,11 +42,15 @@ export interface LabelSettings {
   textBaseline?: CanvasTextBaseline;
 }
 export interface DefaultAxesSettings extends TimeAxisOptions {
+  axisColor?: string;
+  textColor?: string;
   xTicks?: number; yTicks?: number;
   xAxisIsTime?: boolean; yAxisIsTime?: boolean;
 }
 export interface AxisSettings extends Pick<TimeAxisOptions, "locale" | "timeZone" | "timeFormat"> {
   tickFormat?: (value: number) => string;
+  axisColor?: string;
+  textColor?: string;
   x1: number; y1: number; x2: number; y2: number;
   labelXOffset: number; labelYOffset: number; labelTheta: number;
   nTicks: number;
@@ -107,7 +112,23 @@ export interface RichCanvasElement extends EasyCanvasElement {
   getDrawingContext(): CanvasRenderingContext2D;
   disposeRichRendering(): void;
 }
+export interface ChartThemeColors {
+  background: string;
+  foreground: string;
+  axes: string;
+  border: string;
+  muted: string;
+  tooltipBackground: string;
+  legendBackground: string;
+  sliceLabel: string;
+  palette: string[];
+}
 export interface EasyCanvasElement extends HTMLElement {
+  theme: 'auto' | 'light' | 'dark';
+  readonly resolvedTheme: 'light' | 'dark';
+  get themeColors(): ChartThemeColors;
+  set themeColors(value: Partial<ChartThemeColors> | null);
+
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
   shadow: ShadowRoot;

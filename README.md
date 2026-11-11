@@ -122,3 +122,12 @@ Load `easyCanvasRichText.js` after the bundle for optional rich text and on-dema
 Pie and donut charts include legends and hover tooltips by default. Use `showLabels`, `showLegend`, and `showTooltips` to control them individually. `labelFormatter(value, index, fraction)` and `tooltipFormatter(value, index, fraction)` customize the text.
 
 The playground has a scrolling line-number gutter. Ctrl+/ (Cmd+/ on macOS) toggles comments on the current line or selected lines, using JavaScript line comments and HTML/CSS block comments.
+
+
+## Graph themes
+
+Every graph follows the browser color preference by default and has a small light/dark toggle. Choose a mode with `plot.theme = 'dark'`, `plot.theme = 'light'`, or `plot.theme = 'auto'`.
+
+Override individual colors by assigning `plot.themeColors`, for example `{background: '#102b26', axes: '#8cd8c2', foreground: '#e5fff5'}`. Other keys include `border`, `muted`, `tooltipBackground`, `legendBackground`, `sliceLabel`, and `palette`. Assign null to reset. Existing per-chart colors and direct canvas styles continue to work.
+
+The gallery has an EasyCanvas features section for linked plots, themes, pan/zoom, time series, and animation. The guide groups its navigation into getting started, API reference, features, and resources. Detailed date/time controls live in the guide.

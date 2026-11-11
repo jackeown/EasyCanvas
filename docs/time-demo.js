@@ -1,4 +1,4 @@
-// Same data and controls on the homepage and the guide; no library-global settings.
+// Interactive date and timezone controls in the documentation.
 function makeTimeData(start, span) {
   const time = Array.from({length: 85}, (_, i) => start + span * i / 84);
   return {

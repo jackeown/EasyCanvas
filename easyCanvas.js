@@ -1,5 +1,6 @@
 const hotAndReadyFuncs = require('./easyCanvasHotAndReady.js');
 const helpers = require('./helpers.js');
+const chartTheme = require('./easyCanvasTheme.js');
 
 let {defaultColors, zip, defaultVal, defaultVals, dist, getTimeLabel} = helpers;
 
@@ -58,7 +59,9 @@ class EasyCanvas extends HTMLElement {
             "ypadding",
             "default-axes-on",
             "controls",
-            "fontsize"
+            "fontsize",
+            "theme",
+            "show-theme-toggle"
         ];
     }
     
@@ -253,9 +256,37 @@ class EasyCanvas extends HTMLElement {
         this.hotAndReadyEventListeners = {};
 
 
+        chartTheme.initializeTheme(this);
+
         // Constantly be redrawing the plot at this.framerate
         this.renderPlotLoop();
 
+    }
+
+    get theme() {
+        const value = this.getAttribute('theme');
+        return value === 'light' || value === 'dark' ? value : 'auto';
+    }
+
+    set theme(value) {
+        if (!['auto', 'light', 'dark'].includes(value)) throw new RangeError('theme must be auto, light, or dark');
+        this.setAttribute('theme', value);
+    }
+
+    get resolvedTheme() { return chartTheme.resolvedTheme(this); }
+    get themeColors() { return chartTheme.themeColors(this); }
+    set themeColors(value) {
+        this.themeOverrides = value ? {...value} : {};
+        chartTheme.updateTheme(this);
+    }
+
+    connectedCallback() {
+        this.themePreference?.addEventListener('change', this.themePreferenceChanged);
+        chartTheme.updateTheme(this);
+    }
+
+    disconnectedCallback() {
+        this.themePreference?.removeEventListener('change', this.themePreferenceChanged);
     }
 
     saveScalesAndRanges(){
@@ -276,6 +307,11 @@ class EasyCanvas extends HTMLElement {
         if(this.debug)
             console.log(`custom element attribute "${name}" has changed from "${oldValue}" to "${newValue}"`);
         
+        if (name === 'theme' || name === 'show-theme-toggle') {
+            chartTheme.updateTheme(this);
+            return;
+        }
+
         // simple numeric
         if(["xmin", "xmax", "ymin", "ymax", "xpadding", "ypadding", "framerate", "fontsize"].includes(name)){
             this[name] = +newValue;
@@ -371,6 +407,13 @@ class EasyCanvas extends HTMLElement {
             
             this.updateScales();
             this.ctx.clearRect(0,0,this.canvas.width, this.canvas.height);
+            const theme = this.themeColors;
+            this.ctx.save();
+            this.ctx.fillStyle = theme.background;
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            this.ctx.restore();
+            this.ctx.strokeStyle = theme.axes;
+            this.ctx.fillStyle = theme.foreground;
             this.ctx.beginPath(); // clears any old path they may have made.
             
             if(this.drawingLoop){
@@ -405,6 +448,7 @@ class EasyCanvas extends HTMLElement {
 
         this.ctx.save();
 
+        if (settings.color) this.ctx.fillStyle = settings.color;
         this.ctx.textBaseline = settings.textBaseline;
         this.ctx.textAlign = settings.textAlign;
         this.ctx.font = settings.font;
@@ -427,6 +471,8 @@ class EasyCanvas extends HTMLElement {
 
         this.ctx.save();
         this.ctx.lineWidth = 2;
+        this.ctx.strokeStyle = settings.axisColor ?? this.themeColors.axes;
+        this.ctx.fillStyle = settings.textColor ?? this.themeColors.foreground;
         this.ctx.beginPath();
         this.ctx.moveTo(parseInt(this.scaleX(x1)), parseInt(this.scaleY(y1)));
         this.ctx.lineTo(parseInt(this.scaleX(x2)), parseInt(this.scaleY(y2)));
@@ -498,6 +544,7 @@ class EasyCanvas extends HTMLElement {
             scaleStart: this.xmin,
             scaleEnd: this.xmax,
             isDatetime: xAxisIsTime,
+            axisColor: settings.axisColor, textColor: settings.textColor,
             tickFormat: settings.xTickFormat,
             locale: settings.locale, timeZone: settings.timeZone, timeFormat: settings.timeFormat
         })
@@ -517,6 +564,7 @@ class EasyCanvas extends HTMLElement {
             scaleStart: this.ymin,
             scaleEnd: this.ymax,
             isDatetime: yAxisIsTime,
+            axisColor: settings.axisColor, textColor: settings.textColor,
             tickFormat: settings.yTickFormat,
             locale: settings.locale, timeZone: settings.timeZone, timeFormat: settings.timeFormat
         })

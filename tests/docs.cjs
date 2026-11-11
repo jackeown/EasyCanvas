@@ -39,7 +39,7 @@ assert.ok(html.includes('James McKeown'), 'Developer credit is present');
 console.log('PASS: every code block highlighted; complete copyable examples preserved.');
 
 new vm.Script(fs.readFileSync(path.join(root, 'docs/gallery.js'), 'utf8'));
-assert.equal((home.match(/class="gallery-title"/g) || []).length, 18);
+assert.equal((home.match(/class="gallery-title"/g) || []).length, 21);
 assert.ok(!home.includes('id="start"'), 'No repeated guide below the gallery');
 assert.ok(!home.includes('docs/site.js'), 'Homepage does not initialize duplicate guide plots');
 assert.ok(!html.includes('docs/gallery.js'), 'Guide does not initialize homepage plots');
@@ -74,14 +74,27 @@ for (const [id, example] of Object.entries(custom)) {
 console.log('PASS: gallery code and playground source share one definition.');
 
 assert.ok(html.indexOf('id="reference"') < html.indexOf('id="start"'), 'API reference is prominent');
-assert.equal((html.match(/class="api-detail"/g) || []).length, 14, 'Reference has organized collapsible sections');
+assert.equal((html.match(/class="api-detail"/g) || []).length, 15, 'Reference has organized collapsible sections');
 assert.ok(html.includes('id="api-search"'));
 assert.ok(html.includes('id="api-hotandready"') && html.includes('id="api-core"'));
 for (const page of [home, html]) {
   assert.ok(page.includes('href="https://github.com/jackeown">Jack McKeown'));
   assert.ok(!page.includes('href="https://jackeown.github.io">Jack McKeown'));
-  assert.ok(page.includes('data-time-demo'));
+
 }
 const timeScript = fs.readFileSync(path.join(root, 'docs/time-demo.js'), 'utf8');
 new vm.Script(timeScript);
 console.log('PASS: prominent collapsible API reference, time controls, and GitHub developer links.');
+
+assert.ok(!home.includes('data-time-demo'), 'Homepage keeps the time example compact');
+assert.ok(!home.includes('docs/time-demo.js'), 'Detailed time controls load in the guide');
+assert.ok(html.includes('data-time-demo'), 'Detailed time controls remain in the guide');
+assert.ok(html.includes('id="features"') && html.includes('id="controls"'), 'Feature overview and navigation controls are documented');
+
+const features = JSON.parse(fs.readFileSync(path.join(root, 'docs/feature-examples.json')));
+assert.ok(home.includes('id="easycanvas-features"'));
+for (const [id, example] of Object.entries(features)) {
+  assert.ok(home.includes('example=' + id), id + ': gallery link exists');
+  assert.ok(generated.includes(example.code), id + ': gallery runs its playground source');
+}
+assert.ok(html.includes('id="themes"') && html.includes('id="api-themes"'));

@@ -1,0 +1,22 @@
+{
+  "linked": {
+    "title": "Linked plots",
+    "caption": "Pan or zoom either view. The other follows.",
+    "description": "Pass one shared object to linkInfo and choose the bounds to synchronize. Here both plots share xmin and xmax, while keeping separate y ranges.",
+    "html": "<div class=\"linked-previews\"><easy-canvas id=\"gallery-linked-one\" role=\"img\" aria-label=\"Linked sine plot\"></easy-canvas><easy-canvas id=\"gallery-linked-two\" role=\"img\" aria-label=\"Linked cosine plot\"></easy-canvas></div>",
+    "css": "body { margin: 12px; }\n.linked-previews { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }\neasy-canvas { display: block; width: 100%; height: 340px; }",
+    "code": "const shared = {};\nconst xs = Array.from({length: 121}, (_, i) => i / 10);\nfor (const [id, fn, title] of [\n  ['gallery-linked-one', Math.sin, 'Sine'],\n  ['gallery-linked-two', Math.cos, 'Cosine']\n]) {\n  const plot = document.getElementById(id);\n  plot.setAttribute('fontsize', '20');\n  plot.linkInfo(['xmin', 'xmax'], shared);\n  plot.drawingLoop = () => plot.hotAndReady.linePlot({\n    xs, ys: xs.map(fn)\n  }, {title, legendLabels: [], xTicks: 4, yTicks: 3});\n}"
+  },
+  "themes": {
+    "title": "Themes",
+    "caption": "Try the theme button in the corner of the graph.",
+    "description": "Each graph starts with the browser color preference. Its theme button switches light/dark mode. Set plot.theme to auto, light, or dark, and optionally set plot.themeColors to override individual colors.",
+    "code": "const plot = document.querySelector('#gallery-themes');\nplot.setAttribute('fontsize', '22');\nplot.theme = 'auto';\nconst xs = Array.from({length: 61}, (_, i) => i / 10);\nplot.drawingLoop = () => plot.hotAndReady.linePlot({\n  xs, ys: xs.map(x => Math.sin(x) * 2 + Math.cos(x * 2))\n}, {title: 'Try light and dark', legendLabels: [], xTicks: 4});\n// Try plot.theme = 'dark';\n// Or plot.themeColors = {background: '#102b26', axes: '#8cd8c2'};\n"
+  },
+  "controls": {
+    "title": "Zooming & panning",
+    "caption": "Drag to pan. Scroll over the graph or an axis margin.",
+    "description": "Mouse pan and wheel zoom work automatically. Scroll below the x axis or left of the y axis to zoom that axis alone. Two-finger gestures support touch navigation.",
+    "code": "const plot = document.querySelector('#gallery-controls');\nplot.setAttribute('fontsize', '22');\nconst xs = Array.from({length: 181}, (_, i) => i / 12);\nplot.drawingLoop = () => plot.hotAndReady.linePlot({\n  xs, ys: xs.map(x => Math.sin(x) + 0.16 * x)\n}, {\n  title: 'Explore the curve', xLabel: 'x', yLabel: 'y',\n  legendLabels: [], xTicks: 5, yTicks: 4\n});"
+  }
+}

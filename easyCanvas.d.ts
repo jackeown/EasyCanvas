@@ -70,6 +70,10 @@ export interface PieSettings extends PlotLabels {
   innerRadius?: number;
   startAngle?: number;
   showLabels?: boolean;
+  showLegend?: boolean;
+  showTooltips?: boolean;
+  labelFormatter?: (value: number, index: number, fraction: number) => string;
+  tooltipFormatter?: (value: number, index: number, fraction: number) => string;
   labelColor?: string;
 }
 export interface BoxSettings extends ChartSettings {

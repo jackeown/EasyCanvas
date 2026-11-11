@@ -187,14 +187,17 @@ plot.drawingLoop = () => plot.hotAndReady.histogram(values, {
 {
 const plot = document.querySelector('#gallery-pie');
 plot.setAttribute('fontsize', '24');
-plot.drawingLoop = () => plot.hotAndReady.pieChart([45, 28, 17, 10]);
+const data = {values: [45, 28, 17, 10], labels: ['Rent', 'Food', 'Travel', 'Other']};
+plot.drawingLoop = () => plot.hotAndReady.pieChart(data, {
+  showLabels: true, showLegend: true, showTooltips: true
+});
 }
 {
 const plot = document.querySelector('#gallery-donut');
 plot.setAttribute('fontsize', '24');
 const data = {values: [42, 31, 19, 8], labels: ['Train', 'Bike', 'Walk', 'Bus']};
 plot.drawingLoop = () => plot.hotAndReady.donutChart(data, {
-  innerRadius: 0.52, colors: ['#83a3f1', '#efb482', '#80c4ac', '#c6a6e5']
+  innerRadius: 0.52, showLabels: false, showLegend: true, showTooltips: true, colors: ['#83a3f1', '#efb482', '#80c4ac', '#c6a6e5']
 });
 }
 {

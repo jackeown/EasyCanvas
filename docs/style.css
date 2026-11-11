@@ -162,3 +162,10 @@ html[data-theme="dark"] .inline-code .token:is(.property,.attr-name,.builtin){co
 .editor-surface.is-highlighted textarea::selection{background:#8bb0ff50;color:transparent}
 .editor-surface:focus-within{outline:2px solid var(--blue);outline-offset:2px}
 @media(forced-colors:active){.editor-surface.is-highlighted .editor-highlight{display:none}.editor-surface.is-highlighted textarea{color:CanvasText;caret-color:CanvasText;background:Canvas}}
+
+.editor-shortcut{font-size:11px;margin:10px 0;color:var(--muted)}
+.editor-gutter{position:absolute;top:0;left:0;z-index:2;width:var(--gutter-width,5ch);overflow:hidden;pointer-events:none;background:#202b38;color:#8b9caf;border-right:1px solid #425063;font:13px/1.55 var(--mono);white-space:pre}
+.editor-gutter>div{padding:14px 8px;text-align:right;user-select:none}
+.editor-surface .editor-highlight,.editor-surface textarea{padding-left:calc(var(--gutter-width,5ch) + 14px)}
+pre:has(.code-line)>code{counter-reset:code-line}
+.code-line:before{counter-increment:code-line;content:counter(code-line);display:inline-block;min-width:3ch;margin-right:2ch;text-align:right;color:#8b9caf;user-select:none}

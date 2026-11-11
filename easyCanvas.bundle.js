@@ -658,7 +658,7 @@ function quantile(sorted, fraction) {
     return sorted[lower] + (sorted[Math.ceil(index)] - sorted[lower]) * (index - lower);
 }
 
-module.exports = function createChartHelpers(decorate) {
+module.exports = function createChartHelpers(decorate, drawTooltip) {
     function histogram(data, settings = {}) {
         const values = (Array.isArray(data) ? data : data.values).filter(finite);
         if (!values.length) return [];
@@ -691,15 +691,33 @@ module.exports = function createChartHelpers(decorate) {
         const labels = settings.labels ?? (Array.isArray(data) ? [] : data.labels) ?? [];
         if (!values.every(value => finite(value) && value >= 0)) throw new RangeError('Pie values must be finite and nonnegative');
         const total = values.reduce((sum, value) => sum + value, 0);
+        if (this.defaultAxesOn) this.setAttribute('default-axes-on', 'false');
         if (!total) return;
         if (!finite(total)) throw new RangeError('Pie total must be finite');
         if (this.defaultAxesOn) this.setAttribute('default-axes-on', 'false');
         const ctx = this.ctx;
-        const x = this.canvas.width / 2;
+        const legendLabels = settings.showLegend === false ? [] :
+            values.map((_, index) => settings.legendLabels?.[index] ?? labels[index] ?? 'Slice ' + (index + 1));
+        const longestLabel = Math.max(0, ...legendLabels.map(label => label.length));
+        const legendWidth = legendLabels.length ? Math.min(this.canvas.width * 0.45, longestLabel * this.fontsize / 2 + this.fontsize * 3.5) : 0;
+        const chartWidth = this.canvas.width - legendWidth;
+        const x = chartWidth / 2;
         const y = this.canvas.height * (settings.title ? 0.56 : 0.5);
-        const radius = Math.min(this.canvas.width, this.canvas.height) * 0.36;
+        const radius = Math.min(chartWidth, this.canvas.height) * 0.36;
         const inner = radius * Math.max(0, Math.min(0.95, settings.innerRadius ?? 0));
-        let angle = settings.startAngle ?? -Math.PI / 2;
+        const startAngle = settings.startAngle ?? -Math.PI / 2;
+        let angle = startAngle;
+        const mouseX = this.mouseX === undefined ? NaN : this.scaleX(this.mouseX);
+        const mouseY = this.mouseY === undefined ? NaN : this.scaleY(this.mouseY);
+        const distanceToMouse = Math.hypot(mouseX - x, mouseY - y);
+        const pointerAngle = ((Math.atan2(mouseY - y, mouseX - x) - startAngle) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+        let hovered;
+        if (!this.hotAndReadyEventListeners.pieChart) {
+            const redraw = () => this.renderPlot();
+            this.canvas.addEventListener('mousemove', redraw);
+            this.canvas.addEventListener('mouseleave', redraw);
+            this.hotAndReadyEventListeners.pieChart = redraw;
+        }
         ctx.save();
         try {
             for (const [index, value] of values.entries()) {
@@ -713,12 +731,22 @@ module.exports = function createChartHelpers(decorate) {
                 ctx.closePath();
                 ctx.fillStyle = color(settings, index);
                 ctx.fill();
+                const overSlice = distanceToMouse <= radius && distanceToMouse > inner &&
+                    pointerAngle >= angle - startAngle && pointerAngle < end - startAngle;
+                if (overSlice) {
+                    hovered = {index, value, fraction};
+                    ctx.save();
+                    ctx.strokeStyle = '#20272c';
+                    ctx.lineWidth = 2 * this.dpr;
+                    ctx.stroke();
+                    ctx.restore();
+                }
                 if (settings.showLabels !== false && fraction >= 0.04) {
                     const mid = (angle + end) / 2;
                     const distance = (radius + inner) * 0.57;
                     ctx.fillStyle = settings.labelColor ?? '#20272c';
                     this.drawLabel({
-                        text: labels[index] ?? (fraction * 100).toFixed(0) + '%',
+                        text: settings.labelFormatter?.(value, index, fraction) ?? labels[index] ?? (fraction * 100).toFixed(0) + '%',
                         x: x + distance * Math.cos(mid), y: y + distance * Math.sin(mid),
                         textAlign: 'center', textBaseline: 'middle', font: this.fontsize + 'px Lato'
                     });
@@ -726,7 +754,18 @@ module.exports = function createChartHelpers(decorate) {
                 angle = end;
             }
             ctx.fillStyle = '#20272c';
-            decorate.call(this, {title: '', xLabel: '', yLabel: '', legendLabels: [], ...settings});
+            decorate.call(this, {
+                title: '', xLabel: '', yLabel: '', ...settings,
+                colors: values.map((_, index) => color(settings, index)), legendLabels
+            });
+            if (hovered && settings.showTooltips !== false) {
+                const {index, value, fraction} = hovered;
+                const info = settings.tooltipFormatter ? { [labels[index] ?? legendLabels[index] ?? 'Slice ' + (index + 1)]: settings.tooltipFormatter(value, index, fraction) } : {
+                    Label: labels[index] ?? legendLabels[index] ?? 'Slice ' + (index + 1),
+                    Value: String(value), Share: (fraction * 100).toFixed(1) + '%'
+                };
+                drawTooltip.call(this, this.mouseX, this.mouseY, info);
+            }
         } finally {
             ctx.restore();
         }
@@ -1235,7 +1274,7 @@ module.exports = {
     linePlot,
     barPlot,
     drawTooltip,
-    ...require('./easyCanvasCharts.js')(drawLegendAxesLabelsAndTitle)
+    ...require('./easyCanvasCharts.js')(drawLegendAxesLabelsAndTitle, drawTooltip)
 };
 
 },{"./easyCanvasCharts.js":2,"./helpers.js":4}],4:[function(require,module,exports){

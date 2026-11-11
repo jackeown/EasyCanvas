@@ -5,7 +5,7 @@
   "description": "Original EasyCanvas source, documentation, and browser build tooling",
   "scripts": {
     "build": "browserify easyCanvas.js -o easyCanvas.bundle.js",
-    "test": "node tests/docs.cjs && node tests/time.cjs && node tests/examples.cjs && tsc --noEmit --strict --lib ES2020,DOM --moduleResolution node tests/types.ts",
+    "test": "node tests/docs.cjs && node tests/editor.cjs && node tests/time.cjs && node tests/examples.cjs && tsc --noEmit --strict --lib ES2020,DOM --moduleResolution node tests/types.ts",
     "docs:highlight": "node scripts/highlight.cjs && node scripts/build-custom-examples.cjs && browserify scripts/editor-highlight.js -o docs/editor-highlight.js"
   },
   "devDependencies": {

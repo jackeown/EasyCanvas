@@ -389,5 +389,5 @@ module.exports = {
     linePlot,
     barPlot,
     drawTooltip,
-    ...require('./easyCanvasCharts.js')(drawLegendAxesLabelsAndTitle)
+    ...require('./easyCanvasCharts.js')(drawLegendAxesLabelsAndTitle, drawTooltip)
 };

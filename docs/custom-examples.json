@@ -38,14 +38,14 @@
   "pie": {
     "title": "Pie chart",
     "caption": "A quick look at the parts of a whole.",
-    "description": "Pass an array of nonnegative values. Labels default to percentages. Supply labels or colors to make the chart your own.",
-    "code": "const plot = document.querySelector('#gallery-pie');\nplot.setAttribute('fontsize', '24');\nplot.drawingLoop = () => plot.hotAndReady.pieChart([45, 28, 17, 10]);"
+    "description": "Pass nonnegative values. Each slice has a legend entry and a hover tooltip with its name, value, and percentage. Set showLabels, showLegend, or showTooltips to false to hide each feature. Customize text with labelFormatter and tooltipFormatter.",
+    "code": "const plot = document.querySelector('#gallery-pie');\nplot.setAttribute('fontsize', '24');\nconst data = {values: [45, 28, 17, 10], labels: ['Rent', 'Food', 'Travel', 'Other']};\nplot.drawingLoop = () => plot.hotAndReady.pieChart(data, {\n  showLabels: true, showLegend: true, showTooltips: true\n});"
   },
   "donut": {
     "title": "Donut chart",
     "caption": "Same proportions, room in the middle.",
-    "description": "Donut charts use the same data as pies. innerRadius sets the hole size as a fraction of the outer radius.",
-    "code": "const plot = document.querySelector('#gallery-donut');\nplot.setAttribute('fontsize', '24');\nconst data = {values: [42, 31, 19, 8], labels: ['Train', 'Bike', 'Walk', 'Bus']};\nplot.drawingLoop = () => plot.hotAndReady.donutChart(data, {\n  innerRadius: 0.52, colors: ['#83a3f1', '#efb482', '#80c4ac', '#c6a6e5']\n});"
+    "description": "Donut charts share the pie settings, legends, and hover tooltips. The example hides labels inside the ring. Toggle showLabels or customize the hole using innerRadius.",
+    "code": "const plot = document.querySelector('#gallery-donut');\nplot.setAttribute('fontsize', '24');\nconst data = {values: [42, 31, 19, 8], labels: ['Train', 'Bike', 'Walk', 'Bus']};\nplot.drawingLoop = () => plot.hotAndReady.donutChart(data, {\n  innerRadius: 0.52, showLabels: false, showLegend: true, showTooltips: true, colors: ['#83a3f1', '#efb482', '#80c4ac', '#c6a6e5']\n});"
   },
   "box": {
     "title": "Box and whisker",

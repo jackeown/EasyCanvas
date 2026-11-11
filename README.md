@@ -118,3 +118,7 @@ Use these helpers inside `drawingLoop`. The settings argument is optional.
 Open any gallery title in the [playground](https://jackeown.github.io/EasyCanvas/playground.html). Edit JavaScript, HTML, or CSS and the sandboxed preview updates after a brief pause.
 
 Load `easyCanvasRichText.js` after the bundle for optional rich text and on-demand drawing. Call `enhanceEasyCanvas(plot, {richText})`, then `plot.requestRender()` after changes. The callback can draw the text and return true, or return false for normal canvas text. `plot.disposeRichRendering()` restores the normal drawing loop.
+
+Pie and donut charts include legends and hover tooltips by default. Use `showLabels`, `showLegend`, and `showTooltips` to control them individually. `labelFormatter(value, index, fraction)` and `tooltipFormatter(value, index, fraction)` customize the text.
+
+The playground has a scrolling line-number gutter. Ctrl+/ (Cmd+/ on macOS) toggles comments on the current line or selected lines, using JavaScript line comments and HTML/CSS block comments.

@@ -1949,7 +1949,70 @@ Prism.languages.js = Prism.languages.javascript;
 
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{}],2:[function(require,module,exports){
+// Work on complete lines. A selection ending at the next line's start excludes that line.
+module.exports = function toggleComments(value, start, end, language) {
+    const first = start === 0 ? 0 : value.lastIndexOf('\n', start - 1) + 1;
+    const lastPosition = end > start ? end - 1 : end;
+    const newline = value.indexOf('\n', lastPosition);
+    const last = newline < 0 ? value.length : newline;
+    const block = value.slice(first, last);
+    const edits = [];
+
+    if (language === 'js') {
+        const lines = block.split('\n');
+        const nonempty = lines.filter(line => line.trim());
+        const remove = nonempty.length > 0 && nonempty.every(line => /^\s*\/\//.test(line));
+        let position = first;
+        for (const line of lines) {
+            if (line.trim() || lines.length === 1) {
+                const indentation = line.match(/^[\t ]*/)[0].length;
+                const marker = line.slice(indentation).match(/^\/\/ ?/);
+                edits.push({
+                    start: position + indentation,
+                    length: remove ? marker?.[0].length ?? 0 : 0,
+                    text: remove ? '' : '// '
+                });
+            }
+            position += line.length + 1;
+        }
+    } else {
+        const [open, close] = language === 'html' ? ['<!--', '-->'] : ['/*', '*/'];
+        const indentation = block.match(/^[\t ]*/)[0].length;
+        const trailing = block.match(/\s*$/)[0].length;
+        const contentEnd = Math.max(indentation, block.length - trailing);
+        const content = block.slice(indentation, contentEnd);
+        if (content.startsWith(open) && content.endsWith(close)) {
+            const leadingSpace = content[open.length] === ' ' ? 1 : 0;
+            const trailingSpace = content.length > open.length + close.length + leadingSpace && content[content.length - close.length - 1] === ' ' ? 1 : 0;
+            edits.push({start: first + indentation, length: open.length + leadingSpace, text: ''});
+            edits.push({start: first + contentEnd - close.length - trailingSpace, length: close.length + trailingSpace, text: ''});
+        } else {
+            edits.push({start: first + indentation, length: 0, text: open + ' '});
+            edits.push({start: first + contentEnd, length: 0, text: ' ' + close});
+        }
+    }
+
+    function move(position) {
+        let delta = 0;
+        for (const edit of edits) {
+            if (position < edit.start) break;
+            if (position < edit.start + edit.length) return edit.start + delta + edit.text.length;
+            delta += edit.text.length - edit.length;
+        }
+        return position + delta;
+    }
+
+    let replacement = block;
+    for (const edit of [...edits].reverse()) {
+        const offset = edit.start - first;
+        replacement = replacement.slice(0, offset) + edit.text + replacement.slice(offset + edit.length);
+    }
+    return {first, last, replacement, start: move(start), end: move(end)};
+};
+
+},{}],3:[function(require,module,exports){
 const Prism = require('prismjs');
+const toggleComments = require('./editor-comments.cjs');
 
 Prism.manual = true;
 const editor = document.querySelector('#editor');
@@ -1957,25 +2020,45 @@ const language = document.querySelector('#editor-language');
 const surface = editor.closest('.editor-surface');
 const overlay = surface.querySelector('pre');
 const code = overlay.querySelector('code');
+const gutter = surface.querySelector('.editor-gutter');
+const lineNumbers = gutter.querySelector('div');
 const grammars = {js: 'javascript', html: 'markup', css: 'css'};
 
 function syncScroll() {
     overlay.scrollTop = editor.scrollTop;
     overlay.scrollLeft = editor.scrollLeft;
+    gutter.scrollTop = editor.scrollTop;
 }
 
 function syncSize() {
     overlay.style.width = editor.clientWidth + 'px';
     overlay.style.height = editor.clientHeight + 'px';
+    gutter.style.height = editor.clientHeight + 'px';
     syncScroll();
 }
 
 function highlight() {
+    const count = editor.value.split('\n').length;
+    lineNumbers.textContent = Array.from({length: count}, (_, index) => index + 1).join('\n') + '\n';
+    surface.style.setProperty('--gutter-width', Math.max(3, String(count).length) + 2 + 'ch');
     const syntax = grammars[language.value];
     code.innerHTML = Prism.highlight(editor.value, Prism.languages[syntax], syntax) + '\n';
     syncSize();
 }
 
+editor.addEventListener('keydown', event => {
+    if (!(event.ctrlKey || event.metaKey) || event.altKey || event.key !== '/') return;
+    event.preventDefault();
+    const scrollTop = editor.scrollTop;
+    const scrollLeft = editor.scrollLeft;
+    const selectionDirection = editor.selectionDirection;
+    const change = toggleComments(editor.value, editor.selectionStart, editor.selectionEnd, language.value);
+    editor.setRangeText(change.replacement, change.first, change.last, 'preserve');
+    editor.setSelectionRange(change.start, change.end, selectionDirection);
+    editor.scrollTop = scrollTop;
+    editor.scrollLeft = scrollLeft;
+    editor.dispatchEvent(new Event('input', {bubbles: true}));
+});
 editor.addEventListener('input', highlight);
 editor.addEventListener('editor-source-change', highlight);
 editor.addEventListener('scroll', syncScroll, {passive: true});
@@ -1983,4 +2066,4 @@ new ResizeObserver(syncSize).observe(editor);
 highlight();
 surface.classList.add('is-highlighted');
 
-},{"prismjs":1}]},{},[2]);
+},{"./editor-comments.cjs":2,"prismjs":1}]},{},[3]);

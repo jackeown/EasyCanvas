@@ -3,8 +3,6 @@
 const plot = document.querySelector('#gallery-lorenz');
 plot.setAttribute('default-axes-on', 'false');
 plot.setAttribute('controls', 'false');
-plot.setAttribute('xpadding', '4');
-plot.setAttribute('ypadding', '4');
 plot.setAttribute('xmin', '-38');
 plot.setAttribute('xmax', '38');
 plot.setAttribute('ymin', '-30');
@@ -40,8 +38,6 @@ plot.drawingLoop = () => {
 const plot = document.querySelector('#gallery-interference');
 plot.setAttribute('default-axes-on', 'false');
 plot.setAttribute('controls', 'false');
-plot.setAttribute('xpadding', '4');
-plot.setAttribute('ypadding', '4');
 plot.setAttribute('xmin', '-5');
 plot.setAttribute('xmax', '5');
 plot.setAttribute('ymin', '-3');
@@ -74,8 +70,6 @@ plot.drawingLoop = () => {
 const plot = document.querySelector('#gallery-sunflower');
 plot.setAttribute('default-axes-on', 'false');
 plot.setAttribute('controls', 'false');
-plot.setAttribute('xpadding', '4');
-plot.setAttribute('ypadding', '4');
 plot.setAttribute('xmin', '-1.2');
 plot.setAttribute('xmax', '1.2');
 plot.setAttribute('ymin', '-1.2');
@@ -106,8 +100,6 @@ plot.drawingLoop = () => {
 const plot = document.querySelector('#gallery-spirograph');
 plot.setAttribute('default-axes-on', 'false');
 plot.setAttribute('controls', 'false');
-plot.setAttribute('xpadding', '4');
-plot.setAttribute('ypadding', '4');
 plot.setAttribute('xmin', '-7');
 plot.setAttribute('xmax', '7');
 plot.setAttribute('ymin', '-5');
@@ -136,8 +128,6 @@ plot.drawingLoop = () => {
 const plot = document.querySelector('#gallery-fractal-tree');
 plot.setAttribute('default-axes-on', 'false');
 plot.setAttribute('controls', 'false');
-plot.setAttribute('xpadding', '4');
-plot.setAttribute('ypadding', '4');
 plot.setAttribute('xmin', '-7');
 plot.setAttribute('xmax', '7');
 plot.setAttribute('ymin', '-1');
@@ -177,16 +167,14 @@ plot.drawingLoop = () => {
 }
 {
 const plot = document.querySelector('#gallery-histogram');
-plot.setAttribute('fontsize', '24');
 const values = Array.from({length: 180}, (_, i) =>
   60 + 13 * Math.sin(i * 2.4) + 9 * Math.cos(i * 0.71) + 6 * Math.sin(i * 0.37));
 plot.drawingLoop = () => plot.hotAndReady.histogram(values, {
-  bins: 12, xLabel: 'Score', yLabel: 'Count', color: '#527add'
+  bins: 12, xLabel: 'Score', yLabel: 'Count',
 });
 }
 {
 const plot = document.querySelector('#gallery-pie');
-plot.setAttribute('fontsize', '24');
 const data = {values: [45, 28, 17, 10], labels: ['Rent', 'Food', 'Travel', 'Other']};
 plot.drawingLoop = () => plot.hotAndReady.pieChart(data, {
   showLabels: true, showLegend: true, showTooltips: true
@@ -194,15 +182,13 @@ plot.drawingLoop = () => plot.hotAndReady.pieChart(data, {
 }
 {
 const plot = document.querySelector('#gallery-donut');
-plot.setAttribute('fontsize', '24');
 const data = {values: [42, 31, 19, 8], labels: ['Train', 'Bike', 'Walk', 'Bus']};
 plot.drawingLoop = () => plot.hotAndReady.donutChart(data, {
-  innerRadius: 0.52, showLabels: false, showLegend: true, showTooltips: true, colors: ['#83a3f1', '#efb482', '#80c4ac', '#c6a6e5']
+  innerRadius: 0.52, showLabels: false, showLegend: true, showTooltips: true
 });
 }
 {
 const plot = document.querySelector('#gallery-box');
-plot.setAttribute('fontsize', '24');
 const groups = {
   North: [9, 12, 14, 16, 17, 19, 23, 35],
   South: [15, 18, 19, 21, 22, 25, 26, 28],
@@ -212,35 +198,31 @@ plot.drawingLoop = () => plot.hotAndReady.boxPlot(groups);
 }
 {
 const plot = document.querySelector('#gallery-scatter');
-plot.setAttribute('fontsize', '24');
 const xs = Array.from({length: 65}, (_, i) => i / 6);
 const ys = xs.map((x, i) => x * 0.7 + Math.sin(i * 2.4) * 2 + 3);
 plot.drawingLoop = () => plot.hotAndReady.scatterPlot({xs, ys}, {
-  radius: 4, color: '#5076dc', xLabel: 'Input', yLabel: 'Output'
+  radius: 4, xLabel: 'Input', yLabel: 'Output'
 });
 }
 {
 const plot = document.querySelector('#gallery-bubble');
-plot.setAttribute('fontsize', '24');
 const xs = [1, 2, 3, 4, 5, 6, 7];
 const ys = [3, 4, 2, 6, 4, 5, 7];
 const radii = [7, 12, 6, 18, 10, 14, 20];
 plot.drawingLoop = () => plot.hotAndReady.bubblePlot({xs, ys, radii}, {
-  color: '#795bc6', opacity: 0.55
+  opacity: 0.55
 });
 }
 {
 const plot = document.querySelector('#gallery-area');
-plot.setAttribute('fontsize', '24');
 const xs = Array.from({length: 60}, (_, i) => i / 5);
 const ys = xs.map(x => 5 + x / 3 + 1.5 * Math.sin(x) + 0.6 * Math.cos(2 * x));
 plot.drawingLoop = () => plot.hotAndReady.areaPlot({xs, ys}, {
-  color: '#3a9c89', xLabel: 'Hour'
+  xLabel: 'Hour'
 });
 }
 {
 const plot = document.querySelector('#gallery-heatmap');
-plot.setAttribute('fontsize', '24');
 const grid = Array.from({length: 18}, (_, row) =>
   Array.from({length: 32}, (_, col) =>
     Math.sin(row * 0.4) * Math.cos(col * 0.29) + Math.sin((row + col) * 0.4)));
@@ -256,34 +238,24 @@ for (const [id, fn, title] of [
   ['gallery-linked-two', Math.cos, 'Cosine']
 ]) {
   const plot = document.getElementById(id);
-  plot.setAttribute('fontsize', '20');
   plot.linkInfo(['xmin', 'xmax'], shared);
   plot.drawingLoop = () => plot.hotAndReady.linePlot({
     xs, ys: xs.map(fn)
-  }, {title, legendLabels: [], xTicks: 4, yTicks: 3});
+  }, {title, legendLabels: []});
 }
 }
 {
 const plots = ['theme-line', 'theme-bar', 'theme-donut'].map(id =>
   document.getElementById(id));
-const picker = document.getElementById('theme-picker');
-
-for (const name of plots[0].availableThemes) {
-  picker.add(new Option(name === 'auto' ? 'Site / browser preference' : name, name));
-}
-function applyTheme() {
-  const theme = picker.value === 'auto'
-    ? document.documentElement.dataset.theme || 'auto'
-    : picker.value;
-  for (const plot of plots) plot.theme = theme;
-}
-picker.addEventListener('change', applyTheme);
-new MutationObserver(applyTheme).observe(document.documentElement, {
-  attributes: true, attributeFilter: ['data-theme']
-});
-applyTheme();
-
-for (const plot of plots) plot.setAttribute('fontsize', '22');
+// Uncomment one of these lines to try a theme. Ctrl+/ toggles comments.
+let theme = 'auto';
+// theme = 'light';
+// theme = 'dark';
+// theme = 'paper';
+// theme = 'forest';
+// theme = 'midnight';
+// theme = 'blueprint';
+for (const plot of plots) plot.theme = theme;
 
 const xs = Array.from({length: 61}, (_, i) => i / 10);
 plots[0].drawingLoop = () => plots[0].hotAndReady.linePlot({
@@ -291,7 +263,6 @@ plots[0].drawingLoop = () => plots[0].hotAndReady.linePlot({
 }, {
   title: 'Line plot', inputs: ['xs', 'xs'], outputs: ['signal', 'trend'],
   legendLabels: ['Signal', 'Trend'], xLabel: 'Input', yLabel: 'Value',
-  xTicks: 4, yTicks: 3
 });
 plots[1].drawingLoop = () => plots[1].hotAndReady.barPlot({
   bars: ['A', 'B', 'C', 'D'], heights: [12, 19, 8, 15]
@@ -309,12 +280,10 @@ plots[2].drawingLoop = () => plots[2].hotAndReady.donutChart({
 }
 {
 const plot = document.querySelector('#gallery-controls');
-plot.setAttribute('fontsize', '22');
 const xs = Array.from({length: 181}, (_, i) => i / 12);
 plot.drawingLoop = () => plot.hotAndReady.linePlot({
   xs, ys: xs.map(x => Math.sin(x) + 0.16 * x)
 }, {
   title: 'Explore the curve', xLabel: 'x', yLabel: 'y',
-  legendLabels: [], xTicks: 5, yTicks: 4
 });
 }

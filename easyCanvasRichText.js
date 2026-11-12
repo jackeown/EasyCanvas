@@ -38,7 +38,8 @@
         clearInterval(plot.dpiInterval);
         cancelAnimationFrame(plot.renderFrame);
         plot.renderPlotLoop = () => {};
-        plot.fixDPI = () => {
+        plot.fixDPI = (force = false) => {
+            if (!plot.autoResize && !force) return;
             const {width, height} = plot.canvas.getBoundingClientRect();
             if (!width || !height) return;
             plot.dpr = window.devicePixelRatio || 1;
@@ -68,7 +69,7 @@
             delete plot.getDrawingContext;
             delete plot.requestRender;
             delete plot.disposeRichRendering;
-            plot.dpiInterval = setInterval(() => plot.fixDPI(), 500);
+            plot.dpiInterval = plot.autoResize ? setInterval(() => plot.fixDPI(), 500) : null;
             plot.fixDPI();
             plot.renderPlotLoop();
         };

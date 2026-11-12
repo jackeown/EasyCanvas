@@ -46,7 +46,7 @@ const sandbox = vm.createContext({
   console, document, HTMLElement: Element,
   customElements: {define(tag, C) { registry.set(tag, C); }},
   window: {addEventListener() {}},
-  requestAnimationFrame() {}, setInterval() {},
+  requestAnimationFrame() {}, cancelAnimationFrame() {}, setInterval() {}, clearInterval() {},
   getComputedStyle() { return {getPropertyValue(key) { return key === 'width' ? '700px' : '340px'; }}; },
   performance: {now() { return 1000; }}
 });
@@ -278,3 +278,56 @@ themed.themeColors = {fontFamily:'monospace', titleFontFamily:'serif', titleWeig
 assert.ok(themed.getFont().includes('monospace'));
 assert.ok(themed.getFont(30, 'title').includes('700 30px serif'));
 console.log('PASS: named theme typography, font overrides, and donut label placement across ring widths.');
+
+
+const responsive = document.createElement('easy-canvas');
+responsive.debug = false;
+responsive.DPIHasBeenSet = true;
+responsive.drawingLoop = () => responsive.hotAndReady.linePlot({xs:[0,6,12],ys:[-1,1,0]}, {title:'Example', xLabel:'Input', yLabel:'Value'});
+responsive.canvas.width = 560; responsive.canvas.height = 360;
+responsive.renderPlot();
+const smallFont = responsive.fontsize;
+const smallTicks = responsive.layout.xTicks;
+assert.ok(responsive.layout.left + responsive.layout.right < responsive.canvas.width);
+assert.ok(responsive.layout.top + responsive.layout.bottom < responsive.canvas.height);
+assert.ok(responsive.layout.labelSize < responsive.fontsize * 1.2);
+responsive.canvas.width = 1800; responsive.canvas.height = 900;
+responsive.renderPlot();
+assert.ok(responsive.fontsize >= smallFont);
+assert.ok(responsive.layout.xTicks >= smallTicks);
+responsive.fontsize = 19;
+responsive.xpadding = 9; responsive.ypadding = 12;
+responsive.renderPlot();
+assert.equal(responsive.fontsize, 19);
+assert.equal(responsive.layout.left, responsive.canvas.width * 0.09);
+assert.equal(responsive.layout.top, responsive.canvas.height * 0.12);
+responsive.updateLayout({xTicks:7,yTicks:3});
+assert.equal(responsive.layout.xTicks, 7);
+assert.equal(responsive.layout.yTicks, 3);
+
+const manual = document.createElement('easy-canvas');
+manual.debug = false;
+manual.autoLayout = manual.autoResize = manual.autoRender = false;
+manual.canvas.width = 640; manual.canvas.height = 320;
+manual.fontsize = 18; manual.xpadding = 8; manual.ypadding = 12;
+manual.xmin = -5; manual.xmax = 5; manual.ymin = -5; manual.ymax = 5;
+manual.drawingLoop = () => manual.hotAndReady.linePlot({xs:[0,1],ys:[0,1]}, {
+    autoScale:false, axes:false, showLegend:false, showTitle:false, showAxisLabels:false
+});
+manual.renderPlot();
+assert.equal(manual.DPIHasBeenSet, true, 'Manual canvases can be drawn before any automatic resize');
+manual.fixDPI();
+assert.equal(manual.canvas.width, 640);
+assert.equal(manual.canvas.height, 320);
+assert.equal(manual.fontsize, 18);
+assert.equal(manual.xmin, -5);
+assert.equal(manual.xmax, 5);
+assert.equal(manual.layout.automatic, false);
+let scheduled = 0;
+sandbox.requestAnimationFrame = () => ++scheduled;
+manual.renderPlotLoop();
+assert.equal(scheduled, 0, 'No automatic frames when autoRender is off');
+manual.autoRender = true;
+assert.equal(scheduled, 1);
+manual.autoRender = false;
+console.log('PASS: responsive sizing, explicit overrides, fixed bounds, manual resizing and rendering.');

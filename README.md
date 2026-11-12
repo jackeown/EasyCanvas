@@ -133,7 +133,12 @@ Override individual colors by assigning `plot.themeColors`, for example `{backgr
 The gallery has an EasyCanvas features section for linked plots, themes, pan/zoom, time series, and animation. The guide groups its navigation into getting started, API reference, features, and resources. Detailed date/time controls live in the guide.
 
 
-Theme presets include light, dark, paper, forest, midnight, and blueprint. Set `plot.theme` from your own button or selector. The [theme demo](https://jackeown.github.io/EasyCanvas/playground.html?example=themes) shows a line chart, bar chart, and donut chart side by side, with one selector updating their default colors and fonts. `plot.availableThemes` lists all supported names, including auto.
+Theme presets include light, dark, paper, forest, midnight, and blueprint. Set `plot.theme` from your own button or selector. The [theme demo](https://jackeown.github.io/EasyCanvas/playground.html?example=themes) shows a line chart, bar chart, and donut chart side by side, with commented assignments for changing their default colors and fonts. `plot.availableThemes` lists all supported names, including auto.
 
 
-On this website, automatic examples and playground previews follow the site theme choice. In other applications, auto continues to use the browser preference. The theme comparison selector can choose a preset independently.
+On this website, automatic examples and playground previews follow the site theme choice. In other applications, auto continues to use the browser preference. The theme example can choose a preset independently by uncommenting an assignment.
+
+
+Automatic layout sizes fonts, padding, and tick counts for the graph. Explicit font and padding values override the defaults. Set `plot.autoLayout = false` for manual layout, or use `autoFontSize`, `autoPadding`, and `autoTicks` independently. `autoResize = false` disables automatic canvas sizing; `autoRender = false` stops the animation-frame loop. Chart helpers support `axes: false`, `showTitle: false`, `showAxisLabels: false`, `showTickLabels: false`, and `showLegend: false`. Use `autoScale: false` for manual data bounds.
+
+Open the theme playground and uncomment a theme assignment to compare presets. Clicking a graph preview or its title on the homepage opens that example’s playground.

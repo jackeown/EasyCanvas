@@ -1,5 +1,10 @@
 /** Types for the existing classic-script browser bundle. No runtime exports. */
 export interface PlotLabels {
+  axes?: boolean;
+  showTitle?: boolean;
+  showAxisLabels?: boolean;
+  showTickLabels?: boolean;
+  showLegend?: boolean;
   title?: string;
   xLabel?: string;
   yLabel?: string;
@@ -42,6 +47,7 @@ export interface LabelSettings {
   textBaseline?: CanvasTextBaseline;
 }
 export interface DefaultAxesSettings extends TimeAxisOptions {
+  showTickLabels?: boolean;
   axisColor?: string;
   textColor?: string;
   xTicks?: number; yTicks?: number;
@@ -128,7 +134,21 @@ export interface ChartThemeColors {
   sliceLabel: string;
   palette: string[];
 }
+export interface CanvasLayout {
+  left: number; right: number; top: number; bottom: number;
+  fontSize: number; titleSize: number; labelSize: number;
+  gap: number; tickLength: number; xTicks: number; yTicks: number;
+  legendTop: number; radial: boolean; automatic: boolean;
+}
 export interface EasyCanvasElement extends HTMLElement {
+  autoLayout: boolean;
+  autoFontSize: boolean;
+  autoPadding: boolean;
+  autoTicks: boolean;
+  autoResize: boolean;
+  autoRender: boolean;
+  layout?: CanvasLayout;
+  updateLayout(settings?: LinePlotSettings): void;
   theme: 'auto' | ChartThemeName;
   readonly availableThemes: ('auto' | ChartThemeName)[];
   readonly resolvedTheme: ChartThemeName;
@@ -149,8 +169,8 @@ export interface EasyCanvasElement extends HTMLElement {
   drawingLoop?: () => void;
   alreadyAutoScaledLinePlot?: boolean;
   hotAndReady: {
-    linePlot(data: LinePlotData, settings: LinePlotSettings): void;
-    barPlot(data: BarPlotData, settings: PlotLabels): void;
+    linePlot(data: LinePlotData, settings?: LinePlotSettings): void;
+    barPlot(data: BarPlotData, settings?: ChartSettings): void;
     histogram(data: number[] | {values: number[]}, settings?: HistogramSettings): HistogramBin[];
     pieChart(data: number[] | {values: number[]; labels?: string[]}, settings?: PieSettings): void;
     donutChart(data: number[] | {values: number[]; labels?: string[]}, settings?: PieSettings): void;
@@ -166,7 +186,7 @@ export interface EasyCanvasElement extends HTMLElement {
   scaleXInverse(value: number): number;
   scaleYInverse(value: number): number;
   updateScales(): void;
-  fixDPI(): void;
+  fixDPI(force?: boolean): void;
   renderPlot(): void;
   saveScalesAndRanges(): void;
   linkInfo(keys: string[], link: Record<string, unknown>): void;

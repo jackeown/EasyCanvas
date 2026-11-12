@@ -63,7 +63,7 @@
     function loadPreset() {
         const example = examples[preset.value];
         const id = example.element;
-        const code = example.code.replace(/(const plot = document\.querySelector\([^\n]+\);)(?!\nplot\.setAttribute\('fontsize')/, "$1\nplot.setAttribute('fontsize', '24');");
+        const code = example.code;
         source = {
             js: code,
             html: example.html ?? '<easy-canvas id="' + id + '"></easy-canvas>',

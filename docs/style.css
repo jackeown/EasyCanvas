@@ -199,3 +199,8 @@ html[data-theme="dark"] :is(.demo,.gallery-chart) .caption,html[data-theme="dark
 .theme-feature .theme-previews easy-canvas{height:260px}
 .feature-gallery .gallery-card:nth-child(n+4){grid-column:span 3}
 @media(max-width:650px){.theme-previews{grid-template-columns:repeat(3,minmax(240px,1fr));overflow-x:auto}.feature-gallery .gallery-card:nth-child(n+4){grid-column:span 1}.feature-gallery .theme-feature{grid-column:1/-1}}
+
+.gallery-chart{position:relative}
+.gallery-open{position:absolute;inset:0;z-index:2;border-radius:4px}
+.gallery-open:hover{box-shadow:inset 0 0 0 2px var(--blue)}
+.gallery-open:focus-visible{outline:3px solid var(--blue);outline-offset:3px}

@@ -1,10 +1,7 @@
-// Gallery examples use the same API and source as their documentation examples.
+// Generated from docs/snippets.json by npm run docs:highlight.
 for (const plot of document.querySelectorAll('.gallery easy-canvas')) {
-  plot.debug = false;
-  plot.setAttribute('framerate', '12');
-  plot.setAttribute('fontsize', '19');
-  plot.setAttribute('xpadding', '16');
-  plot.setAttribute('ypadding', '22');
+    plot.debug = false;
+    plot.setAttribute('framerate', '12');
 }
 document.querySelector('#gallery-bars').setAttribute('controls', 'false');
 
@@ -23,7 +20,6 @@ plot.drawingLoop = () => {
     inputs: ['xs', 'xs'],
     outputs: ['sine', 'cosine'],
     legendLabels: ['Sine', 'Cosine'],
-    colors: ['#2457dc', '#df6846'],
     tooltips: ['xs', 'sine', 'cosine']
   });
 };
@@ -37,10 +33,9 @@ const data = {
 };
 plot.drawingLoop = () => {
   plot.hotAndReady.barPlot(data, {
-    title: 'An entirely made-up bake sale',
+    title: 'Bake sale',
     xLabel: 'Dessert', yLabel: 'Sold',
     legendLabels: data.bars,
-    colors: ['#2457dc', '#df6846', '#43a18b', '#9273b9']
   });
 };
 }
@@ -53,7 +48,7 @@ plot.setAttribute('ymin', '-1.5');
 plot.setAttribute('ymax', '1.5');
 plot.drawingLoop = () => {
   plot.ctx.save();
-  plot.ctx.strokeStyle = '#2457dc';
+  plot.ctx.strokeStyle = plot.themeColors.palette[0];
   plot.ctx.fillStyle = plot.mouseInCircle(0, 0, 0.6)
     ? '#df6846' : '#dce5ff';
   plot.ctx.beginPath();
@@ -74,10 +69,9 @@ plot.setAttribute('ymax', '1.5');
 plot.setAttribute('framerate', '30');
 const xs = Array.from({ length: 161 }, (_, i) => i / 20);
 plot.drawingLoop = () => {
-  const t = matchMedia('(prefers-reduced-motion: reduce)').matches
-    ? 0 : performance.now() / 1000;
+  const t = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : performance.now() / 1000;
   plot.ctx.save();
-  plot.ctx.strokeStyle = '#2457dc';
+  plot.ctx.strokeStyle = plot.themeColors.palette[0];
   plot.drawLine({ xs, ys: xs.map(x => Math.sin(x - t)) });
   plot.ctx.restore();
 };
@@ -98,7 +92,6 @@ plot.drawingLoop = () => {
     inputs: ['time', 'time'], outputs: ['temperature', 'forecast'],
     xLabel: 'Time · UTC', yLabel: 'Temperature (°C)',
     legendLabels: ['Observed', 'Forecast'],
-    colors: ['#2457dc', '#df6846'],
     xAxisIsTime: true, timeZone: 'UTC', locale: 'en-GB', xTicks: 6,
     tooltips: ['time', 'temperature'],
     tooltipFormatters: { temperature: value => `${value.toFixed(1)} °C` }
@@ -108,5 +101,5 @@ plot.drawingLoop = () => {
 };
 }
 
-const guideSections = ['features', 'themes', 'controls', 'start', 'line-plots', 'bar-plots', 'linked', 'custom-drawing', 'animation-updates', 'time-axes', 'typescript', 'reference', 'notes'];
+const guideSections = ['automatic-layout','features','themes','controls','start','line-plots','bar-plots','linked','custom-drawing','animation-updates','time-axes','typescript','reference','notes'];
 if (guideSections.includes(location.hash.slice(1))) location.replace('guide.html' + location.hash);

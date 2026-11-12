@@ -13,7 +13,6 @@ function setupTimeDemo(plot, container) {
   const start = Date.UTC(2026, 0, 1);
   let data, settings;
   plot.drawingLoop = () => plot.hotAndReady.linePlot(data, settings);
-  plot.setAttribute('ypadding', '23');
   plot.setAttribute('framerate', '4');
   function update() {
     const span = Number(field('range').value);
@@ -24,7 +23,7 @@ function setupTimeDemo(plot, container) {
     settings = {
       title: 'A week of temperatures',
       inputs: ['time', 'time'], outputs: ['temperature', 'forecast'],
-      legendLabels: ['Observed', 'Forecast'], colors: ['#2457dc', '#df6846'],
+      legendLabels: ['Observed', 'Forecast'],
       xLabel: 'Time · ' + (mode === 'iso' ? 'UTC' : timeZone || 'browser local'),
       yLabel: 'Temperature (°C)', xTicks: Number(field('ticks').value),
       xAxisIsTime: true, locale, timeZone,

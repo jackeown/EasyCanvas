@@ -1,6 +1,7 @@
 const hotAndReadyFuncs = require('./easyCanvasHotAndReady.js');
 const helpers = require('./helpers.js');
 const chartTheme = require('./easyCanvasTheme.js');
+const chartLayout = require('./easyCanvasLayout.js');
 
 let {defaultColors, zip, defaultVal, defaultVals, dist, getTimeLabel} = helpers;
 
@@ -60,7 +61,8 @@ class EasyCanvas extends HTMLElement {
             "default-axes-on",
             "controls",
             "fontsize",
-            "theme"
+            "theme",
+            "auto-layout", "auto-font-size", "auto-padding", "auto-ticks", "auto-resize", "auto-render"
         ];
     }
     
@@ -165,6 +167,7 @@ class EasyCanvas extends HTMLElement {
 
         // touch events:
         this.canvas.addEventListener("touchstart", function(e){
+            if (this.getAttribute('controls') === 'false') return;
             if(e.touches.length == 2){
                 this.twoFingerStartEvent = e;
                 this.saveScalesAndRanges();
@@ -174,6 +177,7 @@ class EasyCanvas extends HTMLElement {
 
 
         this.canvas.addEventListener("touchmove", function(e){
+            if (this.getAttribute('controls') === 'false') return;
             if(e.touches.length == 2){
                 // Get old and new touch positions
                 let {pageX: x1Old, pageY: y1Old} = this.twoFingerStartEvent.touches[0];
@@ -214,6 +218,7 @@ class EasyCanvas extends HTMLElement {
 
 
         this.canvas.addEventListener("touchend", function(e){
+            if (this.getAttribute('controls') === 'false') return;
             if(e.touches.length == 2){
                 this.twoFingerStartEvent = e;
             }
@@ -226,13 +231,16 @@ class EasyCanvas extends HTMLElement {
         
         // Constantly adjust DPI with possibly changing screen size
         this.DPIHasBeenSet = false;
-        this.dpiInterval = setInterval(this.fixDPI.bind(this), 500);
+        this._autoResize = true;
+        this._autoRender = true;
+        this.autoLayout = this.autoFontSize = this.autoPadding = this.autoTicks = true;
+        this.dpiInterval = setInterval(() => this.fixDPI(), 500);
         window.addEventListener("load", () => this.fixDPI(), {once: true});
         
         // config
         this.framerate = 30;
-        this.xpadding = 10;
-        this.ypadding = 16;
+        this._xpadding = 10;
+        this._ypadding = 16;
 
         this.xmin = -100;
         this.xmax = 100;        
@@ -244,7 +252,7 @@ class EasyCanvas extends HTMLElement {
         
         this.defaultAxesOn = true;
         this.mouseDown = false; // left mouse button is not clicked in when the webpage loads...
-        this.fontsize = 25;
+        this._fontsize = 25;
         this.updateScales();
 
         // bind all methods from easyCanvasHotAndReady
@@ -261,6 +269,29 @@ class EasyCanvas extends HTMLElement {
         this.renderPlotLoop();
 
     }
+
+    get fontsize() { return this._fontsize; }
+    set fontsize(value) { this._fontsize = Number(value); this.manualFontSize = true; }
+    get xpadding() { return this._xpadding; }
+    set xpadding(value) { this._xpadding = Number(value); this.manualXPadding = true; }
+    get ypadding() { return this._ypadding; }
+    set ypadding(value) { this._ypadding = Number(value); this.manualYPadding = true; }
+
+    get autoResize() { return this._autoResize; }
+    set autoResize(value) {
+        this._autoResize = Boolean(value);
+        clearInterval(this.dpiInterval);
+        this.dpiInterval = this._autoResize ? setInterval(() => this.fixDPI(), 500) : null;
+    }
+    get autoRender() { return this._autoRender; }
+    set autoRender(value) {
+        const enabled = Boolean(value);
+        if (enabled === this._autoRender) return;
+        this._autoRender = enabled;
+        cancelAnimationFrame(this.renderFrame);
+        if (enabled) this.renderPlotLoop();
+    }
+    updateLayout(settings = {}) { chartLayout.updateLayout(this, settings); }
 
     get theme() {
         const value = this.getAttribute('theme');
@@ -320,6 +351,20 @@ class EasyCanvas extends HTMLElement {
             return;
         }
 
+        const autoSettings = {
+            'auto-layout':'autoLayout', 'auto-font-size':'autoFontSize',
+            'auto-padding':'autoPadding', 'auto-ticks':'autoTicks',
+            'auto-resize':'autoResize', 'auto-render':'autoRender'
+        };
+        if (autoSettings[name]) {
+            this[autoSettings[name]] = newValue !== 'false';
+            return;
+        }
+        if (newValue === null && ['fontsize','xpadding','ypadding'].includes(name)) {
+            this[{fontsize:'manualFontSize',xpadding:'manualXPadding',ypadding:'manualYPadding'}[name]] = false;
+            return;
+        }
+
         // simple numeric
         if(["xmin", "xmax", "ymin", "ymax", "xpadding", "ypadding", "framerate", "fontsize"].includes(name)){
             this[name] = +newValue;
@@ -335,7 +380,7 @@ class EasyCanvas extends HTMLElement {
             this.canvas.removeEventListener("mousemove",this.panningControl);
             this.canvas.removeEventListener("wheel",this.zoomingControl);
 
-            if(newValue.toLowerCase() === "true"){
+            if(newValue !== "false"){
                 this.canvas.addEventListener("mousemove",this.panningControl);
                 this.canvas.addEventListener("wheel",this.zoomingControl);
             }
@@ -345,38 +390,31 @@ class EasyCanvas extends HTMLElement {
     updateScales(){
         let w = this.canvas.width;
         let h = this.canvas.height;
-        let padXPixels = (this.xpadding/100)*w;
-        let padYPixels = (this.ypadding/100)*h;
-
-        // map the range of the data to the range of the canvas where data should appear.
-        this.scaleX = linearScale(this.xmin, this.xmax, padXPixels, w - padXPixels);
-        this.scaleY = linearScale(this.ymin, this.ymax, h - padYPixels, padYPixels);
-        this.scaleXInverse = linearScale(padXPixels, w - padXPixels, this.xmin, this.xmax);
-        this.scaleYInverse = linearScale(h - padYPixels, padYPixels, this.ymin, this.ymax);
+        const layout = this.layout;
+        const left = layout?.left ?? this.xpadding * w / 100;
+        const right = layout?.right ?? this.xpadding * w / 100;
+        const top = layout?.top ?? this.ypadding * h / 100;
+        const bottom = layout?.bottom ?? this.ypadding * h / 100;
+        this.scaleX = linearScale(this.xmin, this.xmax, left, w - right);
+        this.scaleY = linearScale(this.ymin, this.ymax, h - bottom, top);
+        this.scaleXInverse = linearScale(left, w - right, this.xmin, this.xmax);
+        this.scaleYInverse = linearScale(h - bottom, top, this.ymin, this.ymax);
     }
 
-
-    fixDPI() {
-        //the + prefix casts it to an integer
-        //the slice method gets rid of "px"
-        let s = getComputedStyle(this.canvas)
-        let style_height = +s.getPropertyValue("height").slice(0, -2);
-        let style_width = +s.getPropertyValue("width").slice(0, -2);
-
-        //scale the canvas
-        let heightDiff = Math.abs(this.canvas.height - style_height*this.dpr)
-        let widthDiff = Math.abs(this.canvas.width - style_width*this.dpr)
-
-        // don't need to update canvas height or width unless they have changed significantly recently
-        if(Math.max(heightDiff, widthDiff) > 10){
-            this.canvas.height = style_height*this.dpr;
-            this.canvas.width = style_width*this.dpr;
-            this.DPIHasBeenSet = true;
+    fixDPI(force = false) {
+        if (!this.autoResize && !force) return;
+        const style = getComputedStyle(this.canvas);
+        const height = Math.max(1, Math.round(parseFloat(style.getPropertyValue('height')) * this.dpr));
+        const width = Math.max(1, Math.round(parseFloat(style.getPropertyValue('width')) * this.dpr));
+        const changed = this.canvas.width !== width || this.canvas.height !== height;
+        if (changed) {
+            this.canvas.width = width;
+            this.canvas.height = height;
         }
-
-        this.renderPlot();
+        const initial = !this.DPIHasBeenSet;
+        this.DPIHasBeenSet = true;
+        if (changed || initial || force) this.renderPlot();
     }
-
 
     linkInfo(keys, link){
         this.linkedKeys = keys;
@@ -385,6 +423,7 @@ class EasyCanvas extends HTMLElement {
 
 
     renderPlotLoop(){
+        if (!this.autoRender) return;
         // will be true if this.lastFrame is undefined
         let ready = (new Date() - this.lastFrame > 1000/this.framerate)
         ready = (ready || this.lastFrame === undefined)
@@ -404,7 +443,8 @@ class EasyCanvas extends HTMLElement {
 
     renderPlot(){
         // linked axes and other info maybe...
-        if(this.DPIHasBeenSet){
+        if(this.DPIHasBeenSet || !this.autoResize){
+            this.DPIHasBeenSet = true;
             if(this.link !== undefined){
                 for(let key of this.linkedKeys){
                     if(this.link[key] !== undefined && this.mouseX === undefined){
@@ -413,7 +453,7 @@ class EasyCanvas extends HTMLElement {
                 }
             }
             
-            this.updateScales();
+            this.updateLayout(this.layoutSettings ?? {});
             this.ctx.clearRect(0,0,this.canvas.width, this.canvas.height);
             const theme = this.themeColors;
             this.ctx.save();
@@ -481,14 +521,19 @@ class EasyCanvas extends HTMLElement {
         this.ctx.moveTo(parseInt(this.scaleX(x1)), parseInt(this.scaleY(y1)));
         this.ctx.lineTo(parseInt(this.scaleX(x2)), parseInt(this.scaleY(y2)));
         this.ctx.stroke();
-        for(let i=1; i<=nTicks; i++){
-            let x = this.scaleX(x1 + (x2-x1)*(i/nTicks));
-            let y = this.scaleY(y1 + (y2-y1)*(i/nTicks));
+        const tickLength = this.layout?.tickLength ?? 10;
+        const values = settings.tickValues ?? Array.from({length:nTicks}, (_, i) => i + 1);
+        for (const [index, value] of values.entries()) {
+            const fraction = settings.tickValues ? (value - scaleStart) / (scaleEnd - scaleStart) : value / nTicks;
+            let x = this.scaleX(x1 + (x2-x1)*fraction);
+            let y = this.scaleY(y1 + (y2-y1)*fraction);
 
             this.ctx.beginPath();
-            this.ctx.moveTo(x-10*Math.cos(theta-Math.PI/2), y+10*Math.sin(theta-Math.PI/2));
-            this.ctx.lineTo(x+10*Math.cos(theta-Math.PI/2), y-10*Math.sin(theta-Math.PI/2));
+            this.ctx.moveTo(x-tickLength*Math.cos(theta-Math.PI/2), y+tickLength*Math.sin(theta-Math.PI/2));
+            this.ctx.lineTo(x+tickLength*Math.cos(theta-Math.PI/2), y-tickLength*Math.sin(theta-Math.PI/2));
             this.ctx.stroke();
+
+            if (settings.showTickLabels === false) continue;
 
             // labelXOffset and labelYOffset are in user coordinates (not canvas coordinates)
             let labelX = this.scaleX(this.scaleXInverse(x)+labelXOffset);
@@ -497,31 +542,27 @@ class EasyCanvas extends HTMLElement {
                 x: labelX, 
                 y: labelY, 
                 theta: labelTheta, 
-                textAlign: "center",
+                textAlign: settings.labelTextAlign ?? "center",
+                textBaseline: settings.labelTextBaseline ?? "alphabetic",
                 font: this.getFont()
             };
-            if(labels){
-                labelSettings.text = labels[i-1];
-                this.drawLabel(labelSettings);
+            if (labels) {
+                labelSettings.text = labels[index];
+            } else if (!isNaN(scaleStart) && !isNaN(scaleEnd)) {
+                const position = settings.tickValues ? value : scaleStart + (scaleEnd - scaleStart) * fraction;
+                if (settings.tickFormat) labelSettings.text = settings.tickFormat(position);
+                else if (isDatetime) labelSettings.text = helpers.getTimeLabel(fraction, 1, scaleStart, scaleEnd, settings);
+                else labelSettings.text = chartLayout.tickLabel(this, position);
+            } else {
+                console.error("drawAxis requires labels or both scaleStart and scaleEnd");
+                continue;
             }
-            else if(!isNaN(scaleStart) && !isNaN(scaleEnd)){
-                let label;
-                if (settings.tickFormat) {
-                    label = settings.tickFormat(scaleStart + (scaleEnd - scaleStart) * i / nTicks);
-                }
-                else if(isDatetime){
-                    label = helpers.getTimeLabel(i,nTicks,scaleStart,scaleEnd,settings);
-                }
-                else{
-                    label = scaleStart + (scaleEnd-scaleStart)*(i/nTicks);
-                    label = label.toFixed(2);
-                }
-                labelSettings.text = label;
-                this.drawLabel(labelSettings);
+            if (this.autoLayout && y1 === y2 && !labelTheta) {
+                this.ctx.font = labelSettings.font;
+                const half = this.ctx.measureText(String(labelSettings.text)).width / 2;
+                labelSettings.x = Math.max(half + 2, Math.min(this.canvas.width - half - 2, labelSettings.x));
             }
-            else{
-                console.error("drawAxis method of EasyCanvas object must be called with 'labels' or both 'scaleStart' and 'scaleEnd'");
-            }
+            this.drawLabel(labelSettings);
         }
         this.ctx.restore();
     }
@@ -530,11 +571,11 @@ class EasyCanvas extends HTMLElement {
 
     drawDefaultAxes(settings){
         settings = defaultVal(settings,{});
-        let [xTicks,yTicks] = defaultVals(settings,["xTicks","yTicks"],[10,5]);
+        let [xTicks,yTicks] = defaultVals(settings,["xTicks","yTicks"],[this.layout?.xTicks ?? 10,this.layout?.yTicks ?? 5]);
         let [xAxisIsTime,yAxisIsTime] = defaultVals(settings,["xAxisIsTime","yAxisIsTime"],[false,false]);
 
         // x-axis
-        let labelYOffset = this.scaleYInverse(this.fontsize + 10)-this.scaleYInverse(0);
+        let labelYOffset = this.scaleYInverse(this.autoLayout ? (this.layout?.gap ?? 8) + (this.layout?.tickLength ?? 4) : this.fontsize + 10)-this.scaleYInverse(0);
         this.drawAxis({
             x1:this.xmin,
             y1:this.ymin,
@@ -542,8 +583,11 @@ class EasyCanvas extends HTMLElement {
             y2:this.ymin, 
             labelXOffset:0,
             labelYOffset:labelYOffset,
-            labelTheta: Math.PI/8,
+            labelTheta: this.autoLayout ? 0 : Math.PI/8,
+            showTickLabels: settings.showTickLabels,
+            labelTextBaseline: this.autoLayout ? "top" : "alphabetic",
             nTicks: xTicks,
+            tickValues: this.autoLayout && this.autoTicks && settings.xTicks === undefined && !xAxisIsTime ? chartLayout.niceTicks(this.xmin, this.xmax, xTicks) : undefined,
             labels: undefined,
             scaleStart: this.xmin,
             scaleEnd: this.xmax,
@@ -554,7 +598,7 @@ class EasyCanvas extends HTMLElement {
         })
     
         // y-axis
-        let labelXOffset = this.scaleXInverse(-(this.fontsize + 10))-this.scaleXInverse(0);
+        let labelXOffset = this.scaleXInverse(-(this.layout?.gap ?? (this.fontsize + 10)))-this.scaleXInverse(0);
         this.drawAxis({
             x1:this.xmin,
             y1: this.ymin,
@@ -562,8 +606,12 @@ class EasyCanvas extends HTMLElement {
             y2:this.ymax, 
             labelXOffset:labelXOffset,
             labelYOffset:0,
-            labelTheta: Math.PI/3,
+            labelTheta: this.autoLayout ? 0 : Math.PI/3,
+            labelTextAlign: this.autoLayout ? "right" : "center",
+            labelTextBaseline: this.autoLayout ? "middle" : "alphabetic",
+            showTickLabels: settings.showTickLabels,
             nTicks: yTicks,
+            tickValues: this.autoLayout && this.autoTicks && settings.yTicks === undefined && !yAxisIsTime ? chartLayout.niceTicks(this.ymin, this.ymax, yTicks) : undefined,
             labels: undefined,
             scaleStart: this.ymin,
             scaleEnd: this.ymax,

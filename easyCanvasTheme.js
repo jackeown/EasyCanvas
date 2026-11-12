@@ -57,7 +57,7 @@ function updateTheme(plot) {
     const colors = themeColors(plot);
     plot.canvas.style.backgroundColor = colors.background;
     plot.canvas.style.borderColor = colors.border;
-    if (plot.DPIHasBeenSet) plot.renderPlot();
+    if (plot.DPIHasBeenSet && plot.autoRender) plot.renderPlot();
 }
 
 function initializeTheme(plot) {

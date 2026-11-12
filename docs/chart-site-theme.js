@@ -1,28 +1,37 @@
-// Website integration. EasyCanvas itself defaults to the browser preference.
+// Application-level site preference. Standalone EasyCanvas follows the browser.
 (() => {
     const root = document.documentElement;
-    const applied = new WeakMap();
+    const following = new WeakSet();
+    const writes = new WeakMap();
 
-    function sync() {
+    function apply(plot) {
+        if (!plot.availableThemes) return;
+        if (plot.theme === 'auto') following.add(plot);
         const theme = root.dataset.theme;
-        if (theme !== 'light' && theme !== 'dark') return;
-        for (const plot of document.querySelectorAll('easy-canvas')) {
-            if (!plot.availableThemes || plot.closest('.theme-previews')) continue;
-            const previous = applied.get(plot);
-            if (plot.theme === 'auto' || plot.theme === previous) {
-                applied.set(plot, theme);
-                if (plot.theme !== theme) plot.theme = theme;
-            } else {
-                applied.delete(plot);
-            }
-        }
+        if (!following.has(plot) || !['light','dark'].includes(theme) || plot.theme === theme) return;
+        writes.set(plot, (writes.get(plot) || 0) + 1);
+        plot.theme = theme;
     }
 
-    new MutationObserver(sync).observe(root, {attributes: true, attributeFilter: ['data-theme']});
+    new MutationObserver(() => {
+        for (const plot of document.querySelectorAll('easy-canvas')) apply(plot);
+    }).observe(root, {attributes:true, attributeFilter:['data-theme']});
     new MutationObserver(records => {
-        const addedPlot = records.some(record => [...record.addedNodes].some(node =>
-            node.nodeType === 1 && (node.matches('easy-canvas') || node.querySelector('easy-canvas'))));
-        if (addedPlot) sync();
-    }).observe(root, {childList: true, subtree: true});
-    sync();
+        for (const record of records) {
+            if (record.type === 'attributes') {
+                const plot = record.target;
+                const pending = writes.get(plot) || 0;
+                if (pending) { writes.set(plot, pending - 1); continue; }
+                if (plot.theme !== 'auto') following.delete(plot);
+                apply(plot);
+            } else {
+                for (const node of record.addedNodes) {
+                    if (node.nodeType !== 1) continue;
+                    if (node.matches('easy-canvas')) apply(node);
+                    for (const plot of node.querySelectorAll('easy-canvas')) apply(plot);
+                }
+            }
+        }
+    }).observe(root, {childList:true, subtree:true, attributes:true, attributeFilter:['theme']});
+    for (const plot of document.querySelectorAll('easy-canvas')) apply(plot);
 })();

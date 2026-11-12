@@ -33,6 +33,7 @@ function cartesian(plot, kind, bounds, settings, draw, decorate) {
         ['xmin', 'xmax', 'ymin', 'ymax'].forEach((name, index) => plot.setAttribute(name, String(bounds[index])));
         chartBounds.set(plot, key);
     }
+    plot.updateLayout({...settings, _radial:false});
     plot.ctx.save();
     try {
         draw();
@@ -91,6 +92,7 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
         const ctx = this.ctx;
         const legendLabels = settings.showLegend === false ? [] :
             values.map((_, index) => settings.legendLabels?.[index] ?? labels[index] ?? 'Slice ' + (index + 1));
+        this.updateLayout({...settings, _radial:true, legendLabels});
         ctx.save();
         ctx.font = this.getFont();
         const legendTextWidth = Math.max(0, ...legendLabels.map(label => ctx.measureText(label).width));
@@ -98,7 +100,7 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
         const legendWidth = legendLabels.length ? Math.min(this.canvas.width * 0.45, legendTextWidth + this.fontsize * 3.5) : 0;
         const chartWidth = this.canvas.width - legendWidth;
         const x = chartWidth / 2;
-        const y = this.canvas.height * (settings.title ? 0.56 : 0.5);
+        const y = this.canvas.height * (settings.showTitle !== false && settings.title ? 0.56 : 0.5);
         const radius = Math.min(chartWidth, this.canvas.height) * 0.36;
         const inner = radius * Math.max(0, Math.min(0.95, settings.innerRadius ?? 0));
         const startAngle = settings.startAngle ?? -Math.PI / 2;

@@ -1,9 +1,6 @@
 // Documentation examples and page interactions.
 for (const plot of document.querySelectorAll('easy-canvas')) {
   plot.debug = false;
-  plot.setAttribute('fontsize', '22');
-  plot.setAttribute('xpadding', '13');
-  plot.setAttribute('ypadding', '20');
 }
 document.querySelector('#bars').setAttribute('controls', 'false');
 
@@ -22,7 +19,6 @@ plot.drawingLoop = () => {
     inputs: ['xs', 'xs'],
     outputs: ['sine', 'cosine'],
     legendLabels: ['Sine', 'Cosine'],
-    colors: ['#2457dc', '#df6846'],
     tooltips: ['xs', 'sine', 'cosine']
   });
 };
@@ -36,10 +32,9 @@ const data = {
 };
 plot.drawingLoop = () => {
   plot.hotAndReady.barPlot(data, {
-    title: 'An entirely made-up bake sale',
+    title: 'Bake sale',
     xLabel: 'Dessert', yLabel: 'Sold',
     legendLabels: data.bars,
-    colors: ['#2457dc', '#df6846', '#43a18b', '#9273b9']
   });
 };
 }
@@ -71,7 +66,7 @@ plot.setAttribute('ymin', '-1.5');
 plot.setAttribute('ymax', '1.5');
 plot.drawingLoop = () => {
   plot.ctx.save();
-  plot.ctx.strokeStyle = '#2457dc';
+  plot.ctx.strokeStyle = plot.themeColors.palette[0];
   plot.ctx.fillStyle = plot.mouseInCircle(0, 0, 0.6)
     ? '#df6846' : '#dce5ff';
   plot.ctx.beginPath();
@@ -94,7 +89,7 @@ const xs = Array.from({ length: 161 }, (_, i) => i / 20);
 plot.drawingLoop = () => {
   const t = performance.now() / 1000;
   plot.ctx.save();
-  plot.ctx.strokeStyle = '#2457dc';
+  plot.ctx.strokeStyle = plot.themeColors.palette[0];
   plot.drawLine({ xs, ys: xs.map(x => Math.sin(x - t)) });
   plot.ctx.restore();
 };
@@ -115,7 +110,6 @@ plot.drawingLoop = () => {
     inputs: ['time', 'time'], outputs: ['temperature', 'forecast'],
     xLabel: 'Time · UTC', yLabel: 'Temperature (°C)',
     legendLabels: ['Observed', 'Forecast'],
-    colors: ['#2457dc', '#df6846'],
     xAxisIsTime: true, timeZone: 'UTC', locale: 'en-GB', xTicks: 6,
     tooltips: ['time', 'temperature'],
     tooltipFormatters: { temperature: value => `${value.toFixed(1)} °C` }
@@ -135,7 +129,7 @@ document.querySelector('#toggle-animation').addEventListener('click', event => {
     frozenTime = performance.now() / 1000;
     animation.drawingLoop = () => {
       animation.ctx.save();
-      animation.ctx.strokeStyle = '#2457dc';
+      animation.ctx.strokeStyle = animation.themeColors.palette[0];
       const xs = Array.from({length: 161}, (_, i) => i / 20);
       animation.drawLine({xs, ys: xs.map(x => Math.sin(x - frozenTime))});
       animation.ctx.restore();

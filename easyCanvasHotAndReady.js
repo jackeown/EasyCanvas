@@ -2,7 +2,8 @@
 /* they will be made accessable via EasyCanvas.hotAndReady */
 
 // helpers:
-const helpers = require('./helpers.js')
+const helpers = require('./helpers.js');
+const {niceTicks} = require('./easyCanvasLayout.js');
 let {defaultColors, zip, defaultVal, defaultVals, dist, getTimeLabel} = helpers;
 
 
@@ -75,6 +76,25 @@ function drawTooltip(x,y,info){
 
 function drawLegend(labels, settings){
     if (!labels.length) return;
+    if (this.layout?.automatic && !this.layout.radial) {
+        const {left, right, gap, legendTop} = this.layout;
+        let x = left;
+        let y = legendTop;
+        const patch = this.fontsize * 0.65;
+        for (const label of labels) {
+            const width = textWidth(this, label.text, this.getFont()) + this.fontsize * 1.7;
+            if (x > left && x + width > this.canvas.width - right) {
+                x = left;
+                y += this.fontsize * 1.4;
+            }
+            this.ctx.fillStyle = label.color;
+            this.ctx.fillRect(x, y + (this.fontsize - patch) / 2, patch, patch);
+            this.ctx.fillStyle = this.themeColors.foreground;
+            this.drawLabel({text:label.text, x:x + patch + gap, y, textBaseline:'top', font:this.getFont()});
+            x += width + gap;
+        }
+        return;
+    }
     
     let padding = this.fontsize / 2;
     let lineHeight = this.fontsize;
@@ -117,37 +137,35 @@ function drawLegend(labels, settings){
     }
 }
 
-function drawLegendAxesLabelsAndTitle(settings){
-    let title = defaultVal(settings.title, "Untitled");
-    let xLabel = defaultVal(settings.xLabel, "x");
-    let yLabel = defaultVal(settings.yLabel, "y");
-    let legendLabels = defaultVal(settings.legendLabels, ["y"]);
-    let colors = defaultVal(settings.colors, this.themeColors.palette);
+function drawLegendAxesLabelsAndTitle(settings) {
+    const layout = this.layout;
+    const automatic = layout?.automatic;
+    const title = settings.showTitle === false ? '' : settings.title ?? (automatic ? '' : 'Untitled');
+    const showLabels = settings.showAxisLabels !== false && settings.axes !== false;
+    const xLabel = showLabels ? settings.xLabel ?? (automatic ? '' : 'x') : '';
+    const yLabel = showLabels ? settings.yLabel ?? (automatic ? '' : 'y') : '';
+    const colors = settings.colors ?? this.themeColors.palette;
+    const legend = settings.showLegend === false ? [] : settings.legendLabels ?? [];
+    drawLegend.call(this, legend.map((text, index) => ({text, color:colors[index % colors.length]})).filter(label => label.text));
 
-    // draw legend
-    legendLabels = legendLabels.map((field,i) => {
-        return {text: field, color: colors[i%colors.length]};
-    })
-    legendLabels = legendLabels.filter(x => x.text != "")
-    drawLegend.bind(this)(legendLabels);
-
-    // draw title
-    let titleX = this.canvas.width/2;
-    let titleY = this.fontsize * 2.5;
-    this.drawLabel({text: title, x: titleX, y: titleY, font: this.getFont(this.fontsize * 2, 'title'), textAlign: "center"});
-
-    // draw x-axis label
-    let xLabelX = this.canvas.width/2;
-    let xLabelY = this.canvas.height - (this.fontsize);
-    this.drawLabel({text: xLabel, x: xLabelX, y: xLabelY, font: this.getFont(this.fontsize * 2, 'title'), textAlign: "center"});
-
-    // draw y-axis label
-    let yLabelX = this.fontsize*2;
-    let yLabelY = this.canvas.height/2;
-    this.drawLabel({text: yLabel, x: yLabelX, y: yLabelY, theta: Math.PI/2, font: this.getFont(this.fontsize * 2, 'title'), textAlign: "center"});
+    const centerX = automatic ? (layout.left + this.canvas.width - layout.right) / 2 : this.canvas.width / 2;
+    if (title) this.drawLabel({
+        text:title, x:this.canvas.width / 2, y:automatic ? layout.gap : this.fontsize * 2.5,
+        font:this.getFont(automatic ? layout.titleSize : this.fontsize * 2, 'title'),
+        textAlign:'center', textBaseline:automatic ? 'top' : 'alphabetic'
+    });
+    if (xLabel) this.drawLabel({
+        text:xLabel, x:centerX, y:this.canvas.height - (automatic ? layout.gap : this.fontsize),
+        font:this.getFont(automatic ? layout.labelSize : this.fontsize * 2),
+        textAlign:'center', textBaseline:automatic ? 'bottom' : 'alphabetic'
+    });
+    if (yLabel) this.drawLabel({
+        text:yLabel, x:automatic ? layout.gap + layout.labelSize / 2 : this.fontsize * 2,
+        y:automatic ? (layout.top + this.canvas.height - layout.bottom) / 2 : this.canvas.height / 2,
+        theta:Math.PI / 2, font:this.getFont(automatic ? layout.labelSize : this.fontsize * 2),
+        textAlign:'center', textBaseline:'middle'
+    });
 }
-
-
 
 function rescaleAxes(xmin,xmax,ymin,ymax){
         let ga = this.getAttribute.bind(this);
@@ -246,18 +264,17 @@ function getLinePlotTooltip(data, inputs, outputs, tooltips, epsilon=100, settin
 
 
 // Actual exported functions
-function linePlot(data, settings){
+function linePlot(data, settings = {}){
     let inputs = defaultVal(settings.inputs, ["xs"]);
     let outputs = defaultVal(settings.outputs, ["ys"]);
     let autoScale = defaultVal(settings.autoScale, true);
     let colors = defaultVal(settings.colors, this.themeColors.palette);
     let lineWidth = defaultVal(settings.lineWidth, 2);
     let tooltips = defaultVal(settings.tooltips, []);
-    let xTicks = defaultVal(settings.xTicks, parseInt(this.canvas.width /120));
-    let yTicks = defaultVal(settings.yTicks, parseInt(this.canvas.height /80));
     let xAxisIsTime = defaultVal(settings.xAxisIsTime, false);
     let yAxisIsTime = defaultVal(settings.yAxisIsTime, false);
     
+    settings = {...settings, legendLabels: settings.legendLabels ?? (outputs.length > 1 ? outputs : [])};
     let zipped = zip(inputs,outputs);
     
     // find extent of data.
@@ -277,9 +294,13 @@ function linePlot(data, settings){
         xmax = defaultVal(settings.xmax, xmax);
         ymin = defaultVal(settings.ymin, ymin);
         ymax = defaultVal(settings.ymax, ymax);
+        if (xmin === xmax) { xmin -= 1; xmax += 1; }
+        if (ymin === ymax) { ymin -= 1; ymax += 1; }
         this.alreadyAutoScaledLinePlot = true;
         rescaleAxes.bind(this)(xmin,xmax,ymin,ymax);
     }
+
+    this.updateLayout(settings);
 
     // draw lines
     for(let [i, [x,y]] of zipped.entries()){
@@ -296,16 +317,7 @@ function linePlot(data, settings){
     if(this.defaultAxesOn){
         this.setAttribute("default-axes-on","false");
     }
-    this.drawDefaultAxes({
-        xTicks: xTicks,
-        yTicks: yTicks,
-        xAxisIsTime: xAxisIsTime,
-        yAxisIsTime: yAxisIsTime,
-        xTickFormat: settings.xTickFormat, yTickFormat: settings.yTickFormat,
-        locale: settings.locale, timeZone: settings.timeZone, timeFormat: settings.timeFormat
-    });
-
-
+    if (settings.axes !== false) this.drawDefaultAxes(settings);
 
     // legend, plot title, and axes labels.
     drawLegendAxesLabelsAndTitle.bind(this)(settings);
@@ -337,7 +349,8 @@ function linePlot(data, settings){
 
 
 
-function barPlot(data, settings){
+function barPlot(data, settings = {}){
+    settings = {...settings, legendLabels:settings.legendLabels ?? []};
     let autoScale = defaultVal(settings.autoScale,true)
     let colors = defaultVal(settings.colors, this.themeColors.palette);
 
@@ -345,31 +358,39 @@ function barPlot(data, settings){
         rescaleAxes.bind(this)(0,1,0,Math.max(...data.heights))
     }
 
+    this.updateLayout(settings);
+
     // y-axis
     let labelXOffset = this.scaleXInverse(-this.fontsize) - this.scaleXInverse(0)
-    this.drawAxis({x1: 0,
+    if (settings.axes !== false) this.drawAxis({x1: 0,
                     y1: 0,
                     x2: 0,
                     y2: this.ymax, 
                     labelXOffset: labelXOffset,
                     labelYOffset: 0,
-                    labelTheta: 2*Math.PI/5,
-                    nTicks: 5,
+                    labelTheta: this.autoLayout ? 0 : 2*Math.PI/5,
+                    labelTextAlign: this.autoLayout ? "right" : "center",
+                    labelTextBaseline: "middle",
+                    showTickLabels: settings.showTickLabels,
+                    nTicks: settings.yTicks ?? this.layout.yTicks,
+                    tickValues: this.autoLayout && this.autoTicks && settings.yTicks === undefined ? niceTicks(0, this.ymax, this.layout.yTicks) : undefined,
                     labels: undefined,
                     scaleStart: 0,
                     scaleEnd: this.ymax})
 
 
     // x-axis
-    labelYOffset = this.scaleYInverse(this.fontsize*1.5) - this.scaleYInverse(0)
+    labelYOffset = this.scaleYInverse(this.autoLayout ? this.layout.gap + this.layout.tickLength : this.fontsize*1.5) - this.scaleYInverse(0)
 
-    this.drawAxis({x1: 0,
+    if (settings.axes !== false) this.drawAxis({x1: 0,
                     y1: 0,
                     x2: this.xmax,
                     y2: 0, 
                     labelXOffset: 0,
                     labelYOffset: labelYOffset,
-                    labelTheta: Math.PI/15,
+                    labelTheta: this.autoLayout ? 0 : Math.PI/15,
+                    labelTextBaseline: "top",
+                    showTickLabels: settings.showTickLabels,
                     nTicks: data.bars.length+1,
                     labels: data.bars.concat("")})
 

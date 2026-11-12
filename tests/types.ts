@@ -30,3 +30,10 @@ plot.themeColors = null;
 plot.theme = 'paper';
 plot.themeColors = {fontFamily:'Georgia, serif', titleFontFamily:'monospace', titleWeight:600};
 plot.getFont(24, 'title');
+
+plot.autoLayout = false;
+plot.autoFontSize = plot.autoPadding = plot.autoTicks = false;
+plot.autoResize = plot.autoRender = false;
+plot.fixDPI(true);
+plot.hotAndReady.linePlot({xs:[0,1],ys:[0,1]});
+plot.hotAndReady.barPlot({bars:['A'],heights:[3]}, {showTitle:false,showTickLabels:false});

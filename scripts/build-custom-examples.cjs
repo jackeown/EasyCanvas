@@ -21,7 +21,7 @@ for (const plot of document.querySelectorAll('.gallery easy-canvas')) {
     plot.debug = false;
     plot.setAttribute('framerate', '12');
 }
-document.querySelector('#gallery-bars').setAttribute('controls', 'false');
+
 `;
 for (const [key, id] of basicExamples) {
     let code = snippets[key].replaceAll('#' + id, '#gallery-' + id);

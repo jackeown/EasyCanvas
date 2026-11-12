@@ -71,7 +71,7 @@
         };
         description.textContent = example.description;
         editor.value = source[language.value];
-        editor.dispatchEvent(new Event('editor-source-change'));
+        editor.dispatchEvent(new CustomEvent('editor-source-change', {detail: {resetHistory: true}}));
         const url = new URL(location.href);
         url.searchParams.set('example', preset.value);
         history.replaceState(null, '', url);

@@ -39,7 +39,7 @@ assert.ok(html.includes('James McKeown'), 'Developer credit is present');
 console.log('PASS: every code block highlighted; complete copyable examples preserved.');
 
 new vm.Script(fs.readFileSync(path.join(root, 'docs/gallery.js'), 'utf8'));
-assert.equal((home.match(/class="gallery-title"/g) || []).length, 21);
+assert.equal((home.match(/class="gallery-title"/g) || []).length, 20);
 assert.ok(!home.includes('id="start"'), 'No repeated guide below the gallery');
 assert.ok(!home.includes('docs/site.js'), 'Homepage does not initialize duplicate guide plots');
 assert.ok(!html.includes('docs/gallery.js'), 'Guide does not initialize homepage plots');

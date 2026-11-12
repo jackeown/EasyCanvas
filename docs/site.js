@@ -2,7 +2,7 @@
 for (const plot of document.querySelectorAll('easy-canvas')) {
   plot.debug = false;
 }
-document.querySelector('#bars').setAttribute('controls', 'false');
+
 
 {
 const xs = Array.from({ length: 161 }, (_, i) => i / 20);
@@ -12,6 +12,11 @@ const data = {
   cosine: xs.map(Math.cos)
 };
 const plot = document.querySelector('#lines');
+// Uncomment to turn off pan and zoom:
+// plot.setAttribute('controls', 'false');
+// Hide hotAndReady axes with { axes: false } in the settings.
+// For custom drawing, uncomment to hide axes:
+// plot.setAttribute('default-axes-on', 'false');
 plot.drawingLoop = () => {
   plot.hotAndReady.linePlot(data, {
     title: 'A couple of waves',
@@ -26,6 +31,11 @@ plot.drawingLoop = () => {
 
 {
 const plot = document.querySelector('#bars');
+// Uncomment to turn off pan and zoom:
+// plot.setAttribute('controls', 'false');
+// Hide hotAndReady axes with { axes: false } in the settings.
+// For custom drawing, uncomment to hide axes:
+// plot.setAttribute('default-axes-on', 'false');
 const data = {
   bars: ['Cake', 'Pie', 'Donuts', 'Cookies'],
   heights: [12, 8, 19, 15]
@@ -47,6 +57,11 @@ for (const [id, fn, title] of [
   ['linked-cosine', Math.cos, 'Cosine']
 ]) {
   const plot = document.getElementById(id);
+// Uncomment to turn off pan and zoom:
+// plot.setAttribute('controls', 'false');
+// Hide hotAndReady axes with { axes: false } in the settings.
+// For custom drawing, uncomment to hide axes:
+// plot.setAttribute('default-axes-on', 'false');
   plot.linkInfo(['xmin', 'xmax'], link);
   const data = { xs, ys: xs.map(fn) };
   plot.drawingLoop = () => {
@@ -60,6 +75,11 @@ for (const [id, fn, title] of [
 
 {
 const plot = document.querySelector('#custom');
+// Uncomment to turn off pan and zoom:
+// plot.setAttribute('controls', 'false');
+// Hide hotAndReady axes with { axes: false } in the settings.
+// For custom drawing, uncomment to hide axes:
+// plot.setAttribute('default-axes-on', 'false');
 plot.setAttribute('xmin', '-2');
 plot.setAttribute('xmax', '2');
 plot.setAttribute('ymin', '-1.5');
@@ -80,6 +100,11 @@ plot.drawingLoop = () => {
 
 {
 const plot = document.querySelector('#animation');
+// Uncomment to turn off pan and zoom:
+// plot.setAttribute('controls', 'false');
+// Hide hotAndReady axes with { axes: false } in the settings.
+// For custom drawing, uncomment to hide axes:
+// plot.setAttribute('default-axes-on', 'false');
 plot.setAttribute('xmin', '0');
 plot.setAttribute('xmax', '8');
 plot.setAttribute('ymin', '-1.5');
@@ -97,6 +122,11 @@ plot.drawingLoop = () => {
 
 {
 const plot = document.querySelector('#dates');
+// Uncomment to turn off pan and zoom:
+// plot.setAttribute('controls', 'false');
+// Hide hotAndReady axes with { axes: false } in the settings.
+// For custom drawing, uncomment to hide axes:
+// plot.setAttribute('default-axes-on', 'false');
 const start = Date.UTC(2026, 0, 1);
 const time = Array.from({ length: 85 }, (_, i) => start + i * 7200000);
 const data = {

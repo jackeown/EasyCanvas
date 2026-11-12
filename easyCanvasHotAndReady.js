@@ -354,8 +354,10 @@ function barPlot(data, settings = {}){
     let autoScale = defaultVal(settings.autoScale,true)
     let colors = defaultVal(settings.colors, this.themeColors.palette);
 
-    if(autoScale){
-        rescaleAxes.bind(this)(0,1,0,Math.max(...data.heights))
+    const boundsKey = JSON.stringify(data.heights);
+    if(autoScale && this.barBoundsKey !== boundsKey){
+        rescaleAxes.bind(this)(0,1,0,Math.max(1,...data.heights));
+        this.barBoundsKey = boundsKey;
     }
 
     this.updateLayout(settings);
@@ -384,7 +386,7 @@ function barPlot(data, settings = {}){
 
     if (settings.axes !== false) this.drawAxis({x1: 0,
                     y1: 0,
-                    x2: this.xmax,
+                    x2: 1,
                     y2: 0, 
                     labelXOffset: 0,
                     labelYOffset: labelYOffset,
@@ -413,9 +415,7 @@ function barPlot(data, settings = {}){
     if(this.defaultAxesOn){
         this.setAttribute("default-axes-on","false");
     }
-    if(this.controls){
-        this.setAttribute("controls","false");
-    }
+
     drawLegendAxesLabelsAndTitle.bind(this)(settings);
 }
 

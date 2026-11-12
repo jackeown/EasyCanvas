@@ -56,7 +56,7 @@ function updateLayout(plot, settings = {}) {
     const timeOptions = {locale:settings.locale, timeZone:settings.timeZone, timeFormat:settings.timeFormat};
     if (automatic && plot.autoPadding) {
         if (!plot.manualXPadding) {
-            const labels = settings.showTickLabels === false || settings.axes === false || settings._radial ? [] :
+            const labels = settings.showTickLabels === false || settings.axes === false ? [] :
                 axisLabels(plot, plot.ymin, plot.ymax, yTicks, {
                     ...timeOptions, tickFormat:settings.yTickFormat, isDatetime:settings.yAxisIsTime
                 });
@@ -79,7 +79,7 @@ function updateLayout(plot, settings = {}) {
                 }
             }
             top = gap * 2 + (title ? titleSize + gap : 0) + legendRows * (font * 1.4);
-            bottom = gap * 2 + (settings.axes !== false && settings.showTickLabels !== false && !settings._radial ? font + tickLength : 0) + (xLabel ? labelSize + gap : 0);
+            bottom = gap * 2 + (settings.axes !== false && settings.showTickLabels !== false ? font + tickLength : 0) + (xLabel ? labelSize + gap : 0);
         }
         // Keep a useful drawing region even for small canvases or long labels.
         left = Math.min(left, w * 0.4);

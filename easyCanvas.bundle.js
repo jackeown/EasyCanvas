@@ -697,6 +697,7 @@ customElements.define('easy-canvas', EasyCanvas);
 
 },{"./easyCanvasHotAndReady.js":3,"./easyCanvasLayout.js":4,"./easyCanvasTheme.js":5,"./helpers.js":6}],2:[function(require,module,exports){
 const chartBounds = new WeakMap();
+const radialBounds = new WeakMap();
 const finite = value => typeof value === 'number' && Number.isFinite(value);
 
 function extent(values) {
@@ -797,16 +798,28 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
         ctx.restore();
         const legendWidth = legendLabels.length ? Math.min(this.canvas.width * 0.45, legendTextWidth + this.fontsize * 3.5) : 0;
         const chartWidth = this.canvas.width - legendWidth;
-        const x = chartWidth / 2;
-        const y = this.canvas.height * (settings.showTitle !== false && settings.title ? 0.56 : 0.5);
-        const radius = Math.min(chartWidth, this.canvas.height) * 0.36;
+        const key = [this.canvas.width, this.canvas.height, legendWidth, settings.title].join(':');
+        let geometry = radialBounds.get(this);
+        if (!geometry || geometry.key !== key) {
+            const cx = chartWidth / 2;
+            const cy = this.canvas.height * (settings.showTitle !== false && settings.title ? 0.56 : 0.5);
+            const radius = Math.min(chartWidth, this.canvas.height) * 0.36;
+            geometry = {key, x:this.scaleXInverse(cx), y:this.scaleYInverse(cy),
+                rx:Math.abs(this.scaleXInverse(cx + radius) - this.scaleXInverse(cx)),
+                ry:Math.abs(this.scaleYInverse(cy + radius) - this.scaleYInverse(cy))};
+            radialBounds.set(this, geometry);
+        }
+        const x = this.scaleX(geometry.x), y = this.scaleY(geometry.y);
+        const radius = Math.abs(this.scaleX(geometry.x + geometry.rx) - x);
+        const radiusY = Math.abs(this.scaleY(geometry.y + geometry.ry) - y);
+        const stretch = radiusY / radius;
         const inner = radius * Math.max(0, Math.min(0.95, settings.innerRadius ?? 0));
         const startAngle = settings.startAngle ?? -Math.PI / 2;
         let angle = startAngle;
         const mouseX = this.mouseX === undefined ? NaN : this.scaleX(this.mouseX);
         const mouseY = this.mouseY === undefined ? NaN : this.scaleY(this.mouseY);
-        const distanceToMouse = Math.hypot(mouseX - x, mouseY - y);
-        const pointerAngle = ((Math.atan2(mouseY - y, mouseX - x) - startAngle) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+        const distanceToMouse = Math.hypot(mouseX - x, (mouseY - y) / stretch);
+        const pointerAngle = ((Math.atan2((mouseY - y) / stretch, mouseX - x) - startAngle) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
         let hovered;
         if (!this.hotAndReadyEventListeners.pieChart) {
             const redraw = () => this.renderPlot();
@@ -821,8 +834,8 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
                 const fraction = value / total;
                 const end = angle + fraction * Math.PI * 2;
                 ctx.beginPath();
-                ctx.arc(x, y, radius, angle, end);
-                if (inner) ctx.arc(x, y, inner, end, angle, true);
+                ctx.ellipse(x, y, radius, radiusY, 0, angle, end);
+                if (inner) ctx.ellipse(x, y, inner, inner * stretch, 0, end, angle, true);
                 else ctx.lineTo(x, y);
                 ctx.closePath();
                 ctx.fillStyle = color(this, settings, index);
@@ -843,12 +856,13 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
                     ctx.fillStyle = settings.labelColor ?? this.themeColors.sliceLabel;
                     this.drawLabel({
                         text: settings.labelFormatter?.(value, index, fraction) ?? labels[index] ?? (fraction * 100).toFixed(0) + '%',
-                        x: x + distance * Math.cos(mid), y: y + distance * Math.sin(mid),
+                        x: x + distance * Math.cos(mid), y: y + distance * stretch * Math.sin(mid),
                         textAlign: 'center', textBaseline: 'middle', font: this.getFont()
                     });
                 }
                 angle = end;
             }
+            if (settings.axes !== false) this.drawDefaultAxes(settings);
             ctx.fillStyle = this.themeColors.foreground;
             decorate.call(this, {
                 title: '', xLabel: '', yLabel: '', ...settings,
@@ -963,7 +977,7 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
         const [min, max] = settings.range ?? extent(values);
         if (!finite(min) || !finite(max) || max <= min) throw new RangeError('range must contain two increasing finite bounds');
         const palette = settings.colors?.length ? settings.colors : ['#eff6ff', '#bfdbfe', '#60a5fa', '#2563eb', '#172554'];
-        cartesian(this, 'heatmap', [0, columns, 0, rows], {axes: false, ...settings}, () => {
+        cartesian(this, 'heatmap', [0, columns, 0, rows], settings, () => {
             for (const [row, cells] of data.entries()) {
                 for (const [column, value] of cells.entries()) {
                     if (!finite(value)) continue;
@@ -1335,8 +1349,10 @@ function barPlot(data, settings = {}){
     let autoScale = defaultVal(settings.autoScale,true)
     let colors = defaultVal(settings.colors, this.themeColors.palette);
 
-    if(autoScale){
-        rescaleAxes.bind(this)(0,1,0,Math.max(...data.heights))
+    const boundsKey = JSON.stringify(data.heights);
+    if(autoScale && this.barBoundsKey !== boundsKey){
+        rescaleAxes.bind(this)(0,1,0,Math.max(1,...data.heights));
+        this.barBoundsKey = boundsKey;
     }
 
     this.updateLayout(settings);
@@ -1365,7 +1381,7 @@ function barPlot(data, settings = {}){
 
     if (settings.axes !== false) this.drawAxis({x1: 0,
                     y1: 0,
-                    x2: this.xmax,
+                    x2: 1,
                     y2: 0, 
                     labelXOffset: 0,
                     labelYOffset: labelYOffset,
@@ -1394,9 +1410,7 @@ function barPlot(data, settings = {}){
     if(this.defaultAxesOn){
         this.setAttribute("default-axes-on","false");
     }
-    if(this.controls){
-        this.setAttribute("controls","false");
-    }
+
     drawLegendAxesLabelsAndTitle.bind(this)(settings);
 }
 
@@ -1468,7 +1482,7 @@ function updateLayout(plot, settings = {}) {
     const timeOptions = {locale:settings.locale, timeZone:settings.timeZone, timeFormat:settings.timeFormat};
     if (automatic && plot.autoPadding) {
         if (!plot.manualXPadding) {
-            const labels = settings.showTickLabels === false || settings.axes === false || settings._radial ? [] :
+            const labels = settings.showTickLabels === false || settings.axes === false ? [] :
                 axisLabels(plot, plot.ymin, plot.ymax, yTicks, {
                     ...timeOptions, tickFormat:settings.yTickFormat, isDatetime:settings.yAxisIsTime
                 });
@@ -1491,7 +1505,7 @@ function updateLayout(plot, settings = {}) {
                 }
             }
             top = gap * 2 + (title ? titleSize + gap : 0) + legendRows * (font * 1.4);
-            bottom = gap * 2 + (settings.axes !== false && settings.showTickLabels !== false && !settings._radial ? font + tickLength : 0) + (xLabel ? labelSize + gap : 0);
+            bottom = gap * 2 + (settings.axes !== false && settings.showTickLabels !== false ? font + tickLength : 0) + (xLabel ? labelSize + gap : 0);
         }
         // Keep a useful drawing region even for small canvases or long labels.
         left = Math.min(left, w * 0.4);

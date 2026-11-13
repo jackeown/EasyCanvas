@@ -112,7 +112,7 @@ Use these helpers inside `drawingLoop`. The settings argument is optional.
 | `pieChart` / `donutChart` | `[45, 35, 20]` |
 | `boxPlot` | `[1, 2, 3, 8]` or named groups |
 | `scatterPlot` / `bubblePlot` | `{xs: [1, 2], ys: [3, 5]}` with optional `radii` |
-| `areaPlot` | `{xs: [0, 1], ys: [2, 4]}` |
+| `areaPlot` | `{xs: [0, 1], ys: [2, 4]}`; use nested y arrays or named `outputs` for multiple areas, and `stacked: true` to stack them |
 | `heatmap` | `[[1, 2], [3, 4]]` |
 
 Open any gallery title in the [playground](https://jackeown.github.io/EasyCanvas/playground.html). Edit JavaScript, HTML, or CSS and the sandboxed preview updates after a brief pause.

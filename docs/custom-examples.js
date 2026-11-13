@@ -250,14 +250,32 @@ plot.drawingLoop = () => plot.hotAndReady.bubblePlot({xs, ys, radii}, {
 }
 {
 const plot = document.querySelector('#gallery-area');
+const xs = Array.from({length: 61}, (_, i) => i / 5);
+const data = {
+  xs,
+  solar: xs.map(x => 2 + 3 * Math.sin(x * Math.PI / 12)),
+  wind: xs.map(x => 3 + Math.sin(x) + 0.5 * Math.cos(2 * x)),
+  hydro: xs.map(x => 2 + 0.4 * Math.cos(x / 2))
+};
+
+// Change to false to draw independent, overlapping areas.
+const stacked = true;
+// Keep just ['solar'] to go back to one area.
+const outputs = ['solar', 'wind', 'hydro'];
+// Each output uses xs by default. Independent areas can also use
+// separate x columns via inputs: ['solarTimes', 'windTimes', ...].
+
 // Pan and zoom are on by default. Uncomment to disable them:
 // plot.setAttribute('controls', 'false');
-// Hide helper axes with { axes: false }, or custom axes with:
-// plot.setAttribute('default-axes-on', 'false');
-const xs = Array.from({length: 60}, (_, i) => i / 5);
-const ys = xs.map(x => 5 + x / 3 + 1.5 * Math.sin(x) + 0.6 * Math.cos(2 * x));
-plot.drawingLoop = () => plot.hotAndReady.areaPlot({xs, ys}, {
-  xLabel: 'Hour'
+plot.drawingLoop = () => plot.hotAndReady.areaPlot(data, {
+  stacked, outputs,
+  title: 'Where the power comes from',
+  xLabel: 'Hour', yLabel: 'Power (kW)',
+  // legendLabels: ['Solar', 'Wind', 'Hydro'], // Defaults to output names.
+  // baseline: 0,    // Independent fills end here; stacks start here.
+  // opacity: 0.5,   // Override the default fill transparency.
+  // colors: ['#e9ac36', '#2457dc', '#299a80'], // Or use theme colors.
+  // axes: false, showLegend: false, // Uncomment to hide these parts.
 });
 }
 {

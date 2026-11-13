@@ -104,7 +104,17 @@ export interface BoxSummary {
 export interface XYData { xs: number[]; ys: number[]; }
 export interface ScatterData extends XYData { radii?: number[]; }
 export interface ScatterSettings extends ChartSettings { radius?: number; opacity?: number; }
-export interface AreaSettings extends ChartSettings { baseline?: number; opacity?: number; lineWidth?: number; }
+/** One y array, multiple y arrays sharing xs, or named columns selected by outputs/inputs. */
+export type AreaData = XYData | {xs: number[]; ys: number[][]} | Record<string, number[]>;
+export interface AreaSettings extends ChartSettings {
+  /** Stack positive and negative values separately; all series must share x coordinates. */
+  stacked?: boolean;
+  outputs?: string[];
+  inputs?: string[];
+  baseline?: number;
+  opacity?: number;
+  lineWidth?: number;
+}
 export interface HeatmapSettings extends ChartSettings {
   range?: [number, number];
   colorScale?: (value: number, fraction: number) => string;
@@ -177,7 +187,7 @@ export interface EasyCanvasElement extends HTMLElement {
     boxPlot(data: number[] | Record<string, number[]>, settings?: BoxSettings): BoxSummary[];
     scatterPlot(data: ScatterData, settings?: ScatterSettings): void;
     bubblePlot(data: ScatterData, settings?: ScatterSettings): void;
-    areaPlot(data: XYData, settings?: AreaSettings): void;
+    areaPlot(data: AreaData, settings?: AreaSettings): void;
     heatmap(data: (number | null)[][], settings?: HeatmapSettings): void;
     drawTooltip(x: number, y: number, info: Record<string, unknown>): void;
   };

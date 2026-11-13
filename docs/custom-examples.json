@@ -67,9 +67,9 @@
   },
   "area": {
     "title": "Area chart",
-    "caption": "Fill between a series and its baseline.",
-    "description": "Pass xs and ys in drawing order. The baseline defaults to zero. Set baseline, opacity, or lineWidth to change the fill and outline.",
-    "code": "const plot = document.querySelector('#gallery-area');\n// Pan and zoom are on by default. Uncomment to disable them:\n// plot.setAttribute('controls', 'false');\n// Hide helper axes with { axes: false }, or custom axes with:\n// plot.setAttribute('default-axes-on', 'false');\nconst xs = Array.from({length: 60}, (_, i) => i / 5);\nconst ys = xs.map(x => 5 + x / 3 + 1.5 * Math.sin(x) + 0.6 * Math.cos(2 * x));\nplot.drawingLoop = () => plot.hotAndReady.areaPlot({xs, ys}, {\n  xLabel: 'Hour'\n});"
+    "caption": "Three series, stacked or independently filled.",
+    "description": "Compare three sources of power. Set stacked to false for overlapping independent areas, or keep just one output for a single area. Each series gets a theme color and legend entry. The commented options show how to hide axes, legends, or controls.",
+    "code": "const plot = document.querySelector('#gallery-area');\nconst xs = Array.from({length: 61}, (_, i) => i / 5);\nconst data = {\n  xs,\n  solar: xs.map(x => 2 + 3 * Math.sin(x * Math.PI / 12)),\n  wind: xs.map(x => 3 + Math.sin(x) + 0.5 * Math.cos(2 * x)),\n  hydro: xs.map(x => 2 + 0.4 * Math.cos(x / 2))\n};\n\n// Change to false to draw independent, overlapping areas.\nconst stacked = true;\n// Keep just ['solar'] to go back to one area.\nconst outputs = ['solar', 'wind', 'hydro'];\n// Each output uses xs by default. Independent areas can also use\n// separate x columns via inputs: ['solarTimes', 'windTimes', ...].\n\n// Pan and zoom are on by default. Uncomment to disable them:\n// plot.setAttribute('controls', 'false');\nplot.drawingLoop = () => plot.hotAndReady.areaPlot(data, {\n  stacked, outputs,\n  title: 'Where the power comes from',\n  xLabel: 'Hour', yLabel: 'Power (kW)',\n  // legendLabels: ['Solar', 'Wind', 'Hydro'], // Defaults to output names.\n  // baseline: 0,    // Independent fills end here; stacks start here.\n  // opacity: 0.5,   // Override the default fill transparency.\n  // colors: ['#e9ac36', '#2457dc', '#299a80'], // Or use theme colors.\n  // axes: false, showLegend: false, // Uncomment to hide these parts.\n});"
   },
   "heatmap": {
     "title": "Heatmap",

@@ -951,21 +951,62 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
     }
 
     function areaPlot(data, settings = {}) {
-        const points = paired(data);
-        if (!points.length) return;
         const baseline = settings.baseline ?? 0;
-        cartesian(this, 'area', [...extent(points.map(p => p.x)), ...extent([baseline, ...points.map(p => p.y)])], settings, () => {
-            this.ctx.fillStyle = color(this, settings);
-            this.ctx.globalAlpha = settings.opacity ?? 0.26;
-            this.ctx.beginPath();
-            this.ctx.moveTo(this.scaleX(points[0].x), this.scaleY(baseline));
-            for (const {x, y} of points) this.ctx.lineTo(this.scaleX(x), this.scaleY(y));
-            this.ctx.lineTo(this.scaleX(points.at(-1).x), this.scaleY(baseline));
-            this.ctx.closePath();
-            this.ctx.fill();
-            this.ctx.globalAlpha = 1;
-            this.ctx.strokeStyle = color(this, settings);
-            this.drawLine({xs: points.map(p => p.x), ys: points.map(p => p.y)}, settings.lineWidth ?? 2);
+        if (!finite(baseline)) throw new RangeError('Area baseline must be finite');
+        const outputs = settings.outputs ?? ['ys'];
+        const inputs = settings.inputs ?? ['xs'];
+        const nested = !settings.outputs && Array.isArray(data.ys?.[0]);
+        const series = (nested ? data.ys : outputs.map(name => data[name])).map((ys, index) => {
+            const xs = data[inputs[index] ?? inputs[0]];
+            if (!Array.isArray(xs) || !Array.isArray(ys) || xs.length !== ys.length ||
+                !xs.every(finite) || !ys.every(finite)) {
+                throw new RangeError('Each area needs equally sized, finite x and y arrays');
+            }
+            return {xs, ys, index};
+        });
+        if (!series.length || series.every(({xs}) => !xs.length)) return;
+        if (settings.stacked && series.some(({xs}) => xs.length !== series[0].xs.length ||
+            xs.some((x, index) => x !== series[0].xs[index]))) {
+            throw new RangeError('Stacked areas need matching x coordinates');
+        }
+        // Positive and negative values stack separately around the baseline.
+        const positive = series[0].xs.map(() => baseline);
+        const negative = [...positive];
+        const bands = series.filter(({xs}) => xs.length).map(({xs, ys, index}) => {
+            const lower = [], upper = [];
+            ys.forEach((value, index) => {
+                const stack = value >= 0 ? positive : negative;
+                lower.push(settings.stacked ? stack[index] : baseline);
+                upper.push(lower[index] + value);
+                if (settings.stacked && !finite(upper[index])) throw new RangeError('Area stack total must be finite');
+                if (settings.stacked) stack[index] = upper[index];
+            });
+            // Independent areas keep the original absolute-y baseline behavior.
+            return {xs, index, lower, upper:settings.stacked ? upper : ys};
+        });
+        const labels = bands.map(({index}) => settings.legendLabels?.[index] ??
+            (series.length > 1 ? (nested ? 'Series ' + (index + 1) : outputs[index]) : ''));
+        const chartSettings = {...settings, legendLabels:labels,
+            colors:bands.map(({index}) => color(this, settings, index))};
+        cartesian(this, 'area', [
+            ...extent(bands.flatMap(band => band.xs)),
+            ...extent([baseline, ...bands.flatMap(band => [...band.lower, ...band.upper])])
+        ], chartSettings, () => {
+            bands.forEach(({xs, lower, upper, index}) => {
+                this.ctx.fillStyle = color(this, settings, index);
+                this.ctx.globalAlpha = settings.opacity ?? (settings.stacked ? 0.65 : 0.26);
+                this.ctx.beginPath();
+                this.ctx.moveTo(this.scaleX(xs[0]), this.scaleY(lower[0]));
+                xs.forEach((x, i) => this.ctx.lineTo(this.scaleX(x), this.scaleY(upper[i])));
+                for (let i = xs.length - 1; i >= 0; i--) {
+                    this.ctx.lineTo(this.scaleX(xs[i]), this.scaleY(lower[i]));
+                }
+                this.ctx.closePath();
+                this.ctx.fill();
+                this.ctx.globalAlpha = 1;
+                this.ctx.strokeStyle = color(this, settings, index);
+                this.drawLine({xs, ys:upper}, settings.lineWidth ?? 2);
+            });
         }, decorate);
     }
 

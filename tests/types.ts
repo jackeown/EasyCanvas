@@ -37,3 +37,13 @@ plot.autoResize = plot.autoRender = false;
 plot.fixDPI(true);
 plot.hotAndReady.linePlot({xs:[0,1],ys:[0,1]});
 plot.hotAndReady.barPlot({bars:['A'],heights:[3]}, {showTitle:false,showTickLabels:false});
+
+plot.hotAndReady.areaPlot({xs:[0,1], ys:[[1,2],[3,4]]}, {stacked:true});
+plot.hotAndReady.areaPlot({xs:[0,1], solar:[1,2], wind:[3,4]}, {
+  outputs:['solar','wind'], inputs:['xs'], stacked:false, legendLabels:['Solar','Wind']
+});
+plot.hotAndReady.areaPlot({xs:[0,1], ys:[1,2]}, {baseline:0});
+// @ts-expect-error Area series must contain numbers.
+plot.hotAndReady.areaPlot({xs:[0], ys:[['bad']]});
+// @ts-expect-error Stacking is a boolean switch.
+plot.hotAndReady.areaPlot({xs:[0], ys:[1]}, {stacked:'yes'});

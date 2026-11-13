@@ -292,6 +292,152 @@ plot.drawingLoop = () => plot.hotAndReady.heatmap(grid, {
 });
 }
 {
+const plot = document.querySelector('#gallery-music');
+const waveform = document.querySelector('#music-waveform');
+const play = document.querySelector('#music-play');
+const file = document.querySelector('#music-file');
+const volume = document.querySelector('#music-volume');
+const status = document.querySelector('#music-status');
+// Pan/zoom and axes work here too. Uncomment to turn them off:
+// plot.setAttribute('controls', 'false');
+// plot.setAttribute('default-axes-on', 'false');
+plot.xmin = 0; plot.xmax = 4000;
+plot.ymin = 0; plot.ymax = 1;
+if (waveform) {
+  waveform.xmin = 0; waveform.xmax = 40;
+  waveform.ymin = -1; waveform.ymax = 1;
+  // waveform.setAttribute('controls', 'false');
+  // waveform.setAttribute('default-axes-on', 'false');
+}
+
+// Web Audio does the audio analysis; EasyCanvas draws the results.
+// Nothing plays until you click. Your audio file stays in this browser.
+let audio, analyser, output, source, buffer;
+let playing = false;
+let frequencies, samples;
+const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function setupAudio() {
+  if (audio) return;
+  audio = new AudioContext();
+  analyser = audio.createAnalyser();
+  analyser.fftSize = 2048; // Bigger = finer frequency detail, a longer time window.
+  analyser.smoothingTimeConstant = 0.8; // Lower = snappier movement.
+  output = audio.createGain();
+  output.gain.value = Number(volume.value);
+  analyser.connect(output).connect(audio.destination);
+  frequencies = new Uint8Array(analyser.frequencyBinCount);
+  samples = new Uint8Array(analyser.fftSize);
+}
+
+// A tiny homemade loop, so you don't need a file to try the example.
+// Replace this with any decoded AudioBuffer to use your own source.
+function demoLoop() {
+  const result = audio.createBuffer(1, audio.sampleRate * 4, audio.sampleRate);
+  const channel = result.getChannelData(0);
+  const roots = [130.81, 164.81, 174.61, 146.83];
+  for (let i = 0; i < channel.length; i++) {
+    const t = i / audio.sampleRate;
+    const beat = t % 0.5;
+    const root = roots[Math.floor(t)];
+    const chord = [1, 1.25, 1.5, 2].reduce((sum, ratio) =>
+      sum + Math.sin(2 * Math.PI * root * ratio * t), 0) / 4;
+    const kick = Math.sin(2 * Math.PI * 55 * beat) * Math.exp(-beat * 24);
+    const hat = (Math.random() * 2 - 1) * Math.exp(-(t % 0.25) * 100);
+    channel[i] = 0.3 * chord + 0.45 * kick + 0.08 * hat;
+  }
+  return result;
+}
+function startBuffer() {
+  source?.stop();
+  source = audio.createBufferSource();
+  source.buffer = buffer;
+  source.loop = true;
+  source.connect(analyser);
+  source.start();
+}
+function showPlaying(value) {
+  playing = value;
+  play.textContent = value ? 'Pause' : 'Play';
+  play.setAttribute('aria-pressed', String(value));
+}
+// The gallery has no player controls: it shows a silent illustrative preview.
+// Opening the playground enables the actual audio and its live FFT data.
+if (play) {
+  play.addEventListener('click', async () => {
+    try {
+      setupAudio();
+      if (playing) {
+        await audio.suspend();
+        showPlaying(false);
+        status.textContent = 'Paused';
+      } else {
+        await audio.resume();
+        if (!buffer) buffer = demoLoop();
+        if (!source) startBuffer();
+        showPlaying(true);
+        status.textContent = file.files.length ? file.files[0].name : 'Playing the demo loop';
+      }
+    } catch (error) { status.textContent = 'Could not play audio: ' + error.message; }
+  });
+  file.addEventListener('change', async () => {
+    const selected = file.files[0];
+    if (!selected) return;
+    try {
+      setupAudio();
+      await audio.resume();
+      status.textContent = 'Loading ' + selected.name + '…';
+      buffer = await audio.decodeAudioData(await selected.arrayBuffer());
+      startBuffer();
+      showPlaying(true);
+      status.textContent = selected.name;
+    } catch (error) { status.textContent = 'Could not open this audio file: ' + error.message; }
+  });
+  volume.addEventListener('input', () => {
+    if (output) output.gain.value = Number(volume.value);
+  });
+  addEventListener('pagehide', () => { audio?.close(); });
+}
+
+plot.drawingLoop = () => {
+  if (analyser) analyser.getByteFrequencyData(frequencies);
+  const time = still ? 1 : performance.now() / 1000;
+  const bands = 64, width = 4000 / bands;
+  const ctx = plot.ctx;
+  ctx.save();
+  for (let i = 0; i < bands; i++) {
+    const hz = (i + 0.5) * width;
+    let level = 0;
+    if (analyser) {
+      // Each FFT bin covers sampleRate / fftSize Hz. Average into display bands.
+      const first = Math.floor(i * width * analyser.fftSize / audio.sampleRate);
+      const last = Math.min(frequencies.length, Math.max(first + 1,
+        Math.floor((i + 1) * width * analyser.fftSize / audio.sampleRate)));
+      for (let bin = first; bin < last; bin++) level += frequencies[bin] / 255;
+      level /= Math.max(1, last - first);
+    } else {
+      // Silent preview until Play is pressed; this is not microphone input.
+      level = Math.exp(-hz / 1400) * (0.25 + 0.55 * Math.abs(Math.sin(i * 0.7 + time * 3)));
+    }
+    ctx.fillStyle = plot.themeColors.palette[i % plot.themeColors.palette.length];
+    ctx.beginPath();
+    plot.rect(i * width, 0, width * 0.85, level);
+    ctx.fill();
+  }
+  ctx.restore();
+};
+if (waveform) waveform.drawingLoop = () => {
+  if (analyser) analyser.getByteTimeDomainData(samples);
+  const time = still ? 1 : performance.now() / 1000;
+  const count = analyser ? Math.min(samples.length, Math.floor(audio.sampleRate * 0.04)) : 400;
+  const xs = Array.from({length: count}, (_, i) => i * 40 / (count - 1));
+  const ys = xs.map((ms, i) => analyser ? (samples[i] - 128) / 128 :
+    0.4 * Math.sin(ms * 1.1 + time * 3) * Math.cos(ms * 0.13));
+  waveform.ctx.strokeStyle = waveform.themeColors.palette[0];
+  waveform.drawLine({xs, ys});
+};
+
+}
+{
 const shared = {};
 // Pan and zoom are on by default. Uncomment to disable them:
 // plot.setAttribute('controls', 'false');

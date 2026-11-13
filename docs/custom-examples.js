@@ -185,6 +185,7 @@ const plot = document.querySelector('#gallery-histogram');
 const values = Array.from({length: 180}, (_, i) =>
   60 + 13 * Math.sin(i * 2.4) + 9 * Math.cos(i * 0.71) + 6 * Math.sin(i * 0.37));
 plot.drawingLoop = () => plot.hotAndReady.histogram(values, {
+  // showTooltips: false, // Uncomment to hide hover values.
   bins: 12, xLabel: 'Score', yLabel: 'Count',
 });
 }
@@ -221,7 +222,9 @@ const groups = {
   South: [15, 18, 19, 21, 22, 25, 26, 28],
   West: [7, 8, 12, 13, 16, 18, 19, 22]
 };
-plot.drawingLoop = () => plot.hotAndReady.boxPlot(groups);
+plot.drawingLoop = () => plot.hotAndReady.boxPlot(groups, {
+  // showTooltips: false, // Uncomment to hide hover values.
+});
 }
 {
 const plot = document.querySelector('#gallery-scatter');
@@ -232,6 +235,7 @@ const plot = document.querySelector('#gallery-scatter');
 const xs = Array.from({length: 65}, (_, i) => i / 6);
 const ys = xs.map((x, i) => x * 0.7 + Math.sin(i * 2.4) * 2 + 3);
 plot.drawingLoop = () => plot.hotAndReady.scatterPlot({xs, ys}, {
+  // showTooltips: false, // Uncomment to hide hover values.
   radius: 4, xLabel: 'Input', yLabel: 'Output'
 });
 }
@@ -245,6 +249,7 @@ const xs = [1, 2, 3, 4, 5, 6, 7];
 const ys = [3, 4, 2, 6, 4, 5, 7];
 const radii = [7, 12, 6, 18, 10, 14, 20];
 plot.drawingLoop = () => plot.hotAndReady.bubblePlot({xs, ys, radii}, {
+  // showTooltips: false, // Uncomment to hide hover values.
   opacity: 0.55
 });
 }
@@ -268,6 +273,7 @@ const outputs = ['solar', 'wind', 'hydro'];
 // Pan and zoom are on by default. Uncomment to disable them:
 // plot.setAttribute('controls', 'false');
 plot.drawingLoop = () => plot.hotAndReady.areaPlot(data, {
+  // showTooltips: false, // Uncomment to hide hover values.
   stacked, outputs,
   title: 'Where the power comes from',
   xLabel: 'Hour', yLabel: 'Power (kW)',
@@ -288,6 +294,7 @@ const grid = Array.from({length: 18}, (_, row) =>
   Array.from({length: 32}, (_, col) =>
     Math.sin(row * 0.4) * Math.cos(col * 0.29) + Math.sin((row + col) * 0.4)));
 plot.drawingLoop = () => plot.hotAndReady.heatmap(grid, {
+  // showTooltips: false, // Uncomment to hide hover values.
   colorScale: (_, fraction) => `hsl(${245 - 200 * fraction}, 72%, ${28 + 45 * fraction}%)`
 });
 }

@@ -47,3 +47,9 @@ plot.hotAndReady.areaPlot({xs:[0,1], ys:[1,2]}, {baseline:0});
 plot.hotAndReady.areaPlot({xs:[0], ys:[['bad']]});
 // @ts-expect-error Stacking is a boolean switch.
 plot.hotAndReady.areaPlot({xs:[0], ys:[1]}, {stacked:'yes'});
+
+plot.hotAndReady.linePlot({xs:[0,1],ys:[2,3]}, {showTooltips:false});
+plot.hotAndReady.barPlot(bars, {tooltipFormatters:{Value:(value,index) => `${index}: ${value}`}});
+plot.hotAndReady.areaPlot({xs:[0,1],ys:[2,3]}, {showTooltips:true,tooltipFormatters:{Y:value => `${value} kW`}});
+plot.hotAndReady.histogram([1,2], {tooltipFormatters:{Count:value => `${value} observations`}});
+plot.hotAndReady.pieChart([1,2], {tooltipFormatters:{Value:value => `${value} kg`}});

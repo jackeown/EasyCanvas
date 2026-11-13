@@ -4,6 +4,7 @@
 // helpers:
 const helpers = require('./helpers.js');
 const {niceTicks} = require('./easyCanvasLayout.js');
+const {watchPointer, hasPointer, showTooltip} = require('./easyCanvasTooltips.js');
 let {defaultColors, zip, defaultVal, defaultVals, dist, getTimeLabel} = helpers;
 
 
@@ -17,7 +18,7 @@ function textWidth(plot, text, font) {
 }
 
 function drawTooltip(x,y,info){
-    let padding = 10;
+    let padding = 5 * this.dpr;
     let lineHeight = this.fontsize;
 
 
@@ -43,6 +44,9 @@ function drawTooltip(x,y,info){
     if(y+h > this.canvas.height){
         y = this.canvas.height - h;
     }
+
+    x = Math.max(0, x);
+    y = Math.max(0, y);
 
     // Draw Rectangle 
     this.ctx.save();
@@ -177,61 +181,37 @@ function rescaleAxes(xmin,xmax,ymin,ymax){
 
 
 function getLinePlotTooltip(data, inputs, outputs, tooltips, epsilon=100, settings={}){
-    // make sure inputs has exactly one unique element.
-    if(new Set(inputs).size != 1){
-        console.log("in order to have tooltips on a line plot, all inputs must be the same.");
-        return undefined;
-    } 
-
-    let xs = data[inputs[0]];
-
-    // get closest point to mouse.
-    let mx = this.mouseX;
-    let my = this.mouseY;
-
-    // binary search over x
-    let low = 0;
-    let high = xs.length-1;
-    let guess = Math.round((high+low)/2);
-    while(high - low > 1){
-        if(xs[guess] > mx){
-            high = guess;
-        }
-        else{
-            low = guess;
-        }
-        guess = Math.round((high+low)/2);
-    }
-
-    let index = low;
-    if(Math.abs(xs[high] - mx) < Math.abs(xs[low] - mx)){
-        index = high;
-    }
-
-
-    // find closest y-coordinate
-    let output = undefined;
-    let smallestDist = Infinity;
-    for(let out of outputs){
-        let d = dist(xs[index], data[out][index], mx, my)
-        if(d < smallestDist){
-            output = out;
-            smallestDist = d;
+    if (!hasPointer(this)) return;
+    let closest = epsilon;
+    let selected;
+    for (let series = 0; series < outputs.length; series++) {
+        const input = inputs[series] ?? inputs[0];
+        const output = outputs[series];
+        const xs = data[input] ?? [], ys = data[output] ?? [];
+        for (let index = 0; index < xs.length; index++) {
+            if (!Number.isFinite(xs[index]) || !Number.isFinite(ys[index])) continue;
+            const px = this.scaleX(this.mouseX), py = this.scaleY(this.mouseY);
+            const x1 = this.scaleX(xs[index]), y1 = this.scaleY(ys[index]);
+            let distance = Math.hypot(x1 - px, y1 - py);
+            let sample = index;
+            if (Number.isFinite(xs[index + 1]) && Number.isFinite(ys[index + 1])) {
+                const dx = this.scaleX(xs[index + 1]) - x1;
+                const dy = this.scaleY(ys[index + 1]) - y1;
+                const length = dx * dx + dy * dy;
+                const mix = length ? Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / length)) : 0;
+                distance = Math.hypot(x1 + dx * mix - px, y1 + dy * mix - py);
+                sample = mix < 0.5 ? index : index + 1;
+            }
+            if (distance <= closest) {
+                closest = distance;
+                selected = {index:sample, input, output};
+            }
         }
     }
-
-
-    // ensure it is within epsilon of mouse in canvas (c) coordinates.
-    let cPointX = this.scaleX(xs[index]);
-    let cPointY = this.scaleY(data[output][index]);
-    let cMouseX = this.scaleX(mx);
-    let cMouseY = this.scaleY(my);
-    if(dist(cPointX,cPointY,cMouseX, cMouseY) > epsilon){
-        return undefined;
-    }
-
-    let x = xs[index];
-    let y = data[output][index];
+    if (!selected) return;
+    const {index, input, output} = selected;
+    const x = data[input][index], y = data[output][index];
+    tooltips = tooltips ?? [input, output];
     let info = {};
     for(let tooltip of tooltips){
         const value = data[tooltip][index];
@@ -270,12 +250,12 @@ function linePlot(data, settings = {}){
     let autoScale = defaultVal(settings.autoScale, true);
     let colors = defaultVal(settings.colors, this.themeColors.palette);
     let lineWidth = defaultVal(settings.lineWidth, 2);
-    let tooltips = defaultVal(settings.tooltips, []);
+    let tooltips = settings.tooltips;
     let xAxisIsTime = defaultVal(settings.xAxisIsTime, false);
     let yAxisIsTime = defaultVal(settings.yAxisIsTime, false);
     
     settings = {...settings, legendLabels: settings.legendLabels ?? (outputs.length > 1 ? outputs : [])};
-    let zipped = zip(inputs,outputs);
+    let zipped = outputs.map((output, i) => [inputs[i] ?? inputs[0], output]);
     
     // find extent of data.
     let xmin = ymin = Infinity;
@@ -324,25 +304,15 @@ function linePlot(data, settings = {}){
 
 
     // draw tooltips
-    if(tooltips.length != 0 && this.mouseX !== undefined){
-        let tooltip = getLinePlotTooltip.bind(this)(data, inputs, outputs, tooltips, 100, settings);
+    if(settings.showTooltips !== false && tooltips?.length !== 0 && hasPointer(this)){
+        let tooltip = getLinePlotTooltip.bind(this)(data, inputs, outputs, tooltips, 12 * this.dpr, settings);
         if(tooltip != undefined){
             let {x,y,info} = tooltip;
-            drawTooltip.bind(this)(x,y,info);
+            drawTooltip.bind(this)(this.mouseX,this.mouseY,info);
         }
     }
     
-    if(this.hotAndReadyEventListeners["linePlot"] === undefined){
-        function listener(){
-            // Redraw from the current drawingLoop, not data captured on the first call.
-            this.renderPlot();
-        };
-
-        this.hotAndReadyEventListeners["linePlot"] = {
-            mousemove: listener.bind(this)
-        };
-        this.canvas.addEventListener("mousemove", this.hotAndReadyEventListeners["linePlot"]["mousemove"])
-    }
+    watchPointer(this);
 
 }
 
@@ -397,6 +367,7 @@ function barPlot(data, settings = {}){
                     labels: data.bars.concat("")})
 
 
+    let hovered;
     for(let i=0; i<data.heights.length; i++){
         let w = 1/(data.heights.length+2);
         let pos = ((i+1)/(data.heights.length+1)) - (w/2);
@@ -406,6 +377,7 @@ function barPlot(data, settings = {}){
         if(this.mouseInRect(pos,0,pos+w,0+data.heights[i])){
             this.ctx.lineWidth=3;
             this.ctx.stroke();
+            hovered = {index:i, info:{Category:data.bars[i], Value:data.heights[i]}};
         }
         this.ctx.fill();
     }
@@ -417,6 +389,8 @@ function barPlot(data, settings = {}){
     }
 
     drawLegendAxesLabelsAndTitle.bind(this)(settings);
+    watchPointer(this);
+    showTooltip(this, drawTooltip, settings, hovered);
 }
 
 

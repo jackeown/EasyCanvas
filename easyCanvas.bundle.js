@@ -695,7 +695,8 @@ class EasyCanvas extends HTMLElement {
 
 customElements.define('easy-canvas', EasyCanvas);
 
-},{"./easyCanvasHotAndReady.js":3,"./easyCanvasLayout.js":4,"./easyCanvasTheme.js":5,"./helpers.js":6}],2:[function(require,module,exports){
+},{"./easyCanvasHotAndReady.js":3,"./easyCanvasLayout.js":4,"./easyCanvasTheme.js":5,"./helpers.js":7}],2:[function(require,module,exports){
+const {watchPointer, hasPointer, showTooltip} = require('./easyCanvasTooltips.js');
 const chartBounds = new WeakMap();
 const radialBounds = new WeakMap();
 const finite = value => typeof value === 'number' && Number.isFinite(value);
@@ -723,7 +724,8 @@ function pixelRect(plot, x1, y1, x2, y2) {
     plot.ctx.fillRect(Math.min(x, right), Math.min(y, bottom), Math.abs(right - x), Math.abs(bottom - y));
 }
 
-function cartesian(plot, kind, bounds, settings, draw, decorate) {
+function cartesian(plot, kind, bounds, settings, draw, decorate, drawTooltip) {
+    watchPointer(plot);
     if (plot.defaultAxesOn) plot.setAttribute('default-axes-on', 'false');
     const key = kind + ':' + bounds.join(',');
     if (settings.autoScale === false) {
@@ -735,11 +737,12 @@ function cartesian(plot, kind, bounds, settings, draw, decorate) {
     plot.updateLayout({...settings, _radial:false});
     plot.ctx.save();
     try {
-        draw();
+        const hit = draw();
         plot.ctx.fillStyle = plot.themeColors.foreground;
         plot.ctx.strokeStyle = plot.themeColors.axes;
         if (settings.axes !== false) plot.drawDefaultAxes(settings);
         decorate.call(plot, {title: '', xLabel: '', yLabel: '', legendLabels: [], ...settings});
+        showTooltip(plot, drawTooltip, settings, hit);
     } finally {
         plot.ctx.restore();
     }
@@ -774,8 +777,16 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
         const gap = Math.max(0, Math.min(0.9, settings.gap ?? 0.06)) * width / 2;
         cartesian(this, 'histogram', [min, max, 0, Math.max(...bars.map(bar => bar.height), settings.density ? Number.EPSILON : 1) * 1.08], settings, () => {
             this.ctx.fillStyle = color(this, settings);
-            for (const bar of bars) pixelRect(this, bar.min + gap, 0, bar.max - gap, bar.height);
-        }, decorate);
+            let hit;
+            for (const [index, bar] of bars.entries()) {
+                pixelRect(this, bar.min + gap, 0, bar.max - gap, bar.height);
+                if (this.mouseInRect(bar.min + gap, 0, bar.max - gap, bar.height)) {
+                    hit = {index, info:{'Bin start':bar.min, 'Bin end':bar.max, Count:bar.count,
+                        ...(settings.density ? {Density:bar.height} : {})}};
+                }
+            }
+            return hit;
+        }, decorate, drawTooltip);
         return bars;
     }
 
@@ -821,12 +832,7 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
         const distanceToMouse = Math.hypot(mouseX - x, (mouseY - y) / stretch);
         const pointerAngle = ((Math.atan2((mouseY - y) / stretch, mouseX - x) - startAngle) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
         let hovered;
-        if (!this.hotAndReadyEventListeners.pieChart) {
-            const redraw = () => this.renderPlot();
-            this.canvas.addEventListener('mousemove', redraw);
-            this.canvas.addEventListener('mouseleave', redraw);
-            this.hotAndReadyEventListeners.pieChart = redraw;
-        }
+        watchPointer(this);
         ctx.save();
         try {
             for (const [index, value] of values.entries()) {
@@ -872,9 +878,9 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
                 const {index, value, fraction} = hovered;
                 const info = settings.tooltipFormatter ? { [labels[index] ?? legendLabels[index] ?? 'Slice ' + (index + 1)]: settings.tooltipFormatter(value, index, fraction) } : {
                     Label: labels[index] ?? legendLabels[index] ?? 'Slice ' + (index + 1),
-                    Value: String(value), Share: (fraction * 100).toFixed(1) + '%'
+                    Value: value, Share: (fraction * 100).toFixed(1) + '%'
                 };
-                drawTooltip.call(this, this.mouseX, this.mouseY, info);
+                showTooltip(this, drawTooltip, settings, {index, info});
             }
         } finally {
             ctx.restore();
@@ -908,6 +914,7 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
             ...settings, xTicks: summaries.length + 1,
             xTickFormat: value => summaries[Math.round(value) - 1]?.label ?? ''
         }, () => {
+            let hit;
             for (const [i, box] of summaries.entries()) {
                 const x = i + 1;
                 const half = Math.max(0.05, Math.min(0.48, (settings.boxWidth ?? 0.55) / 2));
@@ -917,15 +924,28 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
                 this.drawLine({xs: [x, x], ys: [box.low, box.q1]});
                 this.drawLine({xs: [x, x], ys: [box.q3, box.high]});
                 for (const y of [box.low, box.median, box.high]) this.drawLine({xs: [x - half, x + half], ys: [y, y]});
+                const nearStem = hasPointer(this) && Math.abs(this.scaleX(this.mouseX) - this.scaleX(x)) <= 6 * this.dpr &&
+                    this.mouseY >= box.low && this.mouseY <= box.high;
+                const nearCap = hasPointer(this) && this.mouseX >= x - half && this.mouseX <= x + half &&
+                    [box.low, box.high].some(y => Math.abs(this.scaleY(this.mouseY) - this.scaleY(y)) <= 6 * this.dpr);
+                if (nearStem || nearCap || this.mouseInRect(x - half, box.q1, x + half, box.q3)) {
+                    hit = {index:i, info:{Group:box.label ?? 'Group ' + (i + 1), 'Lower whisker':box.low,
+                        Q1:box.q1, Median:box.median, Q3:box.q3, 'Upper whisker':box.high}};
+                }
                 if (settings.showOutliers !== false) {
                     for (const y of box.outliers) {
                         this.ctx.beginPath();
                         this.ctx.arc(this.scaleX(x), this.scaleY(y), 2.5 * this.dpr, 0, Math.PI * 2);
                         this.ctx.fill();
+                        if (hasPointer(this) && Math.hypot(this.scaleX(this.mouseX) - this.scaleX(x),
+                            this.scaleY(this.mouseY) - this.scaleY(y)) <= 7 * this.dpr) {
+                            hit = {index:i, info:{Group:box.label ?? 'Group ' + (i + 1), Outlier:y}};
+                        }
                     }
                 }
             }
-        }, decorate);
+            return hit;
+        }, decorate, drawTooltip);
         return summaries;
     }
 
@@ -939,15 +959,23 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
         cartesian(this, 'scatter', [...extent(points.map(p => p.x)), ...extent(points.map(p => p.y))], settings, () => {
             this.ctx.fillStyle = color(this, settings);
             this.ctx.globalAlpha = settings.opacity ?? 0.8;
+            let hit, closest = Infinity;
             for (const {x, y, index} of points) {
                 const radius = data.radii?.[index] ?? settings.radius ?? 4;
                 if (!finite(radius) || radius <= 0) continue;
                 this.ctx.beginPath();
                 this.ctx.arc(this.scaleX(x), this.scaleY(y), radius * this.dpr, 0, Math.PI * 2);
                 this.ctx.fill();
+                const distance = hasPointer(this) ? Math.hypot(this.scaleX(this.mouseX) - this.scaleX(x),
+                    this.scaleY(this.mouseY) - this.scaleY(y)) : Infinity;
+                if (distance <= Math.max(radius, 6) * this.dpr && distance <= closest) {
+                    closest = distance;
+                    hit = {index, info:{X:x, Y:y, ...(data.radii ? {Radius:radius} : {})}};
+                }
             }
             this.ctx.globalAlpha = 1;
-        }, decorate);
+            return hit;
+        }, decorate, drawTooltip);
     }
 
     function areaPlot(data, settings = {}) {
@@ -992,6 +1020,7 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
             ...extent(bands.flatMap(band => band.xs)),
             ...extent([baseline, ...bands.flatMap(band => [...band.lower, ...band.upper])])
         ], chartSettings, () => {
+            let hit;
             bands.forEach(({xs, lower, upper, index}) => {
                 this.ctx.fillStyle = color(this, settings, index);
                 this.ctx.globalAlpha = settings.opacity ?? (settings.stacked ? 0.65 : 0.26);
@@ -1006,8 +1035,25 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
                 this.ctx.globalAlpha = 1;
                 this.ctx.strokeStyle = color(this, settings, index);
                 this.drawLine({xs, ys:upper}, settings.lineWidth ?? 2);
+                if (!hasPointer(this)) return;
+                // Test the filled band at the pointer, interpolating its two edges.
+                // Later series win when independent areas overlap, matching paint order.
+                for (let i = 0; i < Math.max(1, xs.length - 1); i++) {
+                    const j = Math.min(i + 1, xs.length - 1);
+                    if (this.mouseX < Math.min(xs[i], xs[j]) || this.mouseX > Math.max(xs[i], xs[j])) continue;
+                    const mix = xs[j] === xs[i] ? 0 : (this.mouseX - xs[i]) / (xs[j] - xs[i]);
+                    const bottom = lower[i] + (lower[j] - lower[i]) * mix;
+                    const top = upper[i] + (upper[j] - upper[i]) * mix;
+                    if (this.mouseY < Math.min(bottom, top) || this.mouseY > Math.max(bottom, top)) continue;
+                    const sample = mix < 0.5 ? i : j;
+                    hit = {index:sample, info:{Series:settings.legendLabels?.[index] ||
+                        (nested ? 'Series ' + (index + 1) : outputs[index]), X:xs[sample],
+                        Y:series[index].ys[sample], ...(settings.stacked ? {Bottom:lower[sample], Top:upper[sample]} : {})}};
+                    break;
+                }
             });
-        }, decorate);
+            return hit;
+        }, decorate, drawTooltip);
     }
 
     function heatmap(data, settings = {}) {
@@ -1019,27 +1065,33 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
         if (!finite(min) || !finite(max) || max <= min) throw new RangeError('range must contain two increasing finite bounds');
         const palette = settings.colors?.length ? settings.colors : ['#eff6ff', '#bfdbfe', '#60a5fa', '#2563eb', '#172554'];
         cartesian(this, 'heatmap', [0, columns, 0, rows], settings, () => {
+            let hit;
             for (const [row, cells] of data.entries()) {
                 for (const [column, value] of cells.entries()) {
                     if (!finite(value)) continue;
                     const fraction = Math.max(0, Math.min(1, (value - min) / (max - min)));
                     this.ctx.fillStyle = settings.colorScale?.(value, fraction) ?? palette[Math.min(palette.length - 1, Math.floor(fraction * palette.length))];
                     pixelRect(this, column, rows - row - 1, column + 1, rows - row);
+                    if (hasPointer(this) && Math.floor(this.mouseX) === column && rows - 1 - Math.floor(this.mouseY) === row) {
+                        hit = {index:row * columns + column, info:{Row:row, Column:column, Value:value}};
+                    }
                 }
             }
-        }, decorate);
+            return hit;
+        }, decorate, drawTooltip);
     }
 
     return {histogram, pieChart, donutChart, boxPlot, scatterPlot, bubblePlot: scatterPlot, areaPlot, heatmap};
 };
 
-},{}],3:[function(require,module,exports){
+},{"./easyCanvasTooltips.js":6}],3:[function(require,module,exports){
 /* this file contains functions for making very common plots using easyCanvas */
 /* they will be made accessable via EasyCanvas.hotAndReady */
 
 // helpers:
 const helpers = require('./helpers.js');
 const {niceTicks} = require('./easyCanvasLayout.js');
+const {watchPointer, hasPointer, showTooltip} = require('./easyCanvasTooltips.js');
 let {defaultColors, zip, defaultVal, defaultVals, dist, getTimeLabel} = helpers;
 
 
@@ -1053,7 +1105,7 @@ function textWidth(plot, text, font) {
 }
 
 function drawTooltip(x,y,info){
-    let padding = 10;
+    let padding = 5 * this.dpr;
     let lineHeight = this.fontsize;
 
 
@@ -1079,6 +1131,9 @@ function drawTooltip(x,y,info){
     if(y+h > this.canvas.height){
         y = this.canvas.height - h;
     }
+
+    x = Math.max(0, x);
+    y = Math.max(0, y);
 
     // Draw Rectangle 
     this.ctx.save();
@@ -1213,61 +1268,37 @@ function rescaleAxes(xmin,xmax,ymin,ymax){
 
 
 function getLinePlotTooltip(data, inputs, outputs, tooltips, epsilon=100, settings={}){
-    // make sure inputs has exactly one unique element.
-    if(new Set(inputs).size != 1){
-        console.log("in order to have tooltips on a line plot, all inputs must be the same.");
-        return undefined;
-    } 
-
-    let xs = data[inputs[0]];
-
-    // get closest point to mouse.
-    let mx = this.mouseX;
-    let my = this.mouseY;
-
-    // binary search over x
-    let low = 0;
-    let high = xs.length-1;
-    let guess = Math.round((high+low)/2);
-    while(high - low > 1){
-        if(xs[guess] > mx){
-            high = guess;
-        }
-        else{
-            low = guess;
-        }
-        guess = Math.round((high+low)/2);
-    }
-
-    let index = low;
-    if(Math.abs(xs[high] - mx) < Math.abs(xs[low] - mx)){
-        index = high;
-    }
-
-
-    // find closest y-coordinate
-    let output = undefined;
-    let smallestDist = Infinity;
-    for(let out of outputs){
-        let d = dist(xs[index], data[out][index], mx, my)
-        if(d < smallestDist){
-            output = out;
-            smallestDist = d;
+    if (!hasPointer(this)) return;
+    let closest = epsilon;
+    let selected;
+    for (let series = 0; series < outputs.length; series++) {
+        const input = inputs[series] ?? inputs[0];
+        const output = outputs[series];
+        const xs = data[input] ?? [], ys = data[output] ?? [];
+        for (let index = 0; index < xs.length; index++) {
+            if (!Number.isFinite(xs[index]) || !Number.isFinite(ys[index])) continue;
+            const px = this.scaleX(this.mouseX), py = this.scaleY(this.mouseY);
+            const x1 = this.scaleX(xs[index]), y1 = this.scaleY(ys[index]);
+            let distance = Math.hypot(x1 - px, y1 - py);
+            let sample = index;
+            if (Number.isFinite(xs[index + 1]) && Number.isFinite(ys[index + 1])) {
+                const dx = this.scaleX(xs[index + 1]) - x1;
+                const dy = this.scaleY(ys[index + 1]) - y1;
+                const length = dx * dx + dy * dy;
+                const mix = length ? Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / length)) : 0;
+                distance = Math.hypot(x1 + dx * mix - px, y1 + dy * mix - py);
+                sample = mix < 0.5 ? index : index + 1;
+            }
+            if (distance <= closest) {
+                closest = distance;
+                selected = {index:sample, input, output};
+            }
         }
     }
-
-
-    // ensure it is within epsilon of mouse in canvas (c) coordinates.
-    let cPointX = this.scaleX(xs[index]);
-    let cPointY = this.scaleY(data[output][index]);
-    let cMouseX = this.scaleX(mx);
-    let cMouseY = this.scaleY(my);
-    if(dist(cPointX,cPointY,cMouseX, cMouseY) > epsilon){
-        return undefined;
-    }
-
-    let x = xs[index];
-    let y = data[output][index];
+    if (!selected) return;
+    const {index, input, output} = selected;
+    const x = data[input][index], y = data[output][index];
+    tooltips = tooltips ?? [input, output];
     let info = {};
     for(let tooltip of tooltips){
         const value = data[tooltip][index];
@@ -1306,12 +1337,12 @@ function linePlot(data, settings = {}){
     let autoScale = defaultVal(settings.autoScale, true);
     let colors = defaultVal(settings.colors, this.themeColors.palette);
     let lineWidth = defaultVal(settings.lineWidth, 2);
-    let tooltips = defaultVal(settings.tooltips, []);
+    let tooltips = settings.tooltips;
     let xAxisIsTime = defaultVal(settings.xAxisIsTime, false);
     let yAxisIsTime = defaultVal(settings.yAxisIsTime, false);
     
     settings = {...settings, legendLabels: settings.legendLabels ?? (outputs.length > 1 ? outputs : [])};
-    let zipped = zip(inputs,outputs);
+    let zipped = outputs.map((output, i) => [inputs[i] ?? inputs[0], output]);
     
     // find extent of data.
     let xmin = ymin = Infinity;
@@ -1360,25 +1391,15 @@ function linePlot(data, settings = {}){
 
 
     // draw tooltips
-    if(tooltips.length != 0 && this.mouseX !== undefined){
-        let tooltip = getLinePlotTooltip.bind(this)(data, inputs, outputs, tooltips, 100, settings);
+    if(settings.showTooltips !== false && tooltips?.length !== 0 && hasPointer(this)){
+        let tooltip = getLinePlotTooltip.bind(this)(data, inputs, outputs, tooltips, 12 * this.dpr, settings);
         if(tooltip != undefined){
             let {x,y,info} = tooltip;
-            drawTooltip.bind(this)(x,y,info);
+            drawTooltip.bind(this)(this.mouseX,this.mouseY,info);
         }
     }
     
-    if(this.hotAndReadyEventListeners["linePlot"] === undefined){
-        function listener(){
-            // Redraw from the current drawingLoop, not data captured on the first call.
-            this.renderPlot();
-        };
-
-        this.hotAndReadyEventListeners["linePlot"] = {
-            mousemove: listener.bind(this)
-        };
-        this.canvas.addEventListener("mousemove", this.hotAndReadyEventListeners["linePlot"]["mousemove"])
-    }
+    watchPointer(this);
 
 }
 
@@ -1433,6 +1454,7 @@ function barPlot(data, settings = {}){
                     labels: data.bars.concat("")})
 
 
+    let hovered;
     for(let i=0; i<data.heights.length; i++){
         let w = 1/(data.heights.length+2);
         let pos = ((i+1)/(data.heights.length+1)) - (w/2);
@@ -1442,6 +1464,7 @@ function barPlot(data, settings = {}){
         if(this.mouseInRect(pos,0,pos+w,0+data.heights[i])){
             this.ctx.lineWidth=3;
             this.ctx.stroke();
+            hovered = {index:i, info:{Category:data.bars[i], Value:data.heights[i]}};
         }
         this.ctx.fill();
     }
@@ -1453,6 +1476,8 @@ function barPlot(data, settings = {}){
     }
 
     drawLegendAxesLabelsAndTitle.bind(this)(settings);
+    watchPointer(this);
+    showTooltip(this, drawTooltip, settings, hovered);
 }
 
 
@@ -1464,7 +1489,7 @@ module.exports = {
     ...require('./easyCanvasCharts.js')(drawLegendAxesLabelsAndTitle, drawTooltip)
 };
 
-},{"./easyCanvasCharts.js":2,"./easyCanvasLayout.js":4,"./helpers.js":6}],4:[function(require,module,exports){
+},{"./easyCanvasCharts.js":2,"./easyCanvasLayout.js":4,"./easyCanvasTooltips.js":6,"./helpers.js":7}],4:[function(require,module,exports){
 const {getTimeLabel} = require('./helpers.js');
 
 function tickLabel(plot, value) {
@@ -1572,7 +1597,7 @@ function updateLayout(plot, settings = {}) {
 
 module.exports = {updateLayout, tickLabel, niceTicks};
 
-},{"./helpers.js":6}],5:[function(require,module,exports){
+},{"./helpers.js":7}],5:[function(require,module,exports){
 const presets = {
     light: {
         background: '#ffffff', foreground: '#20272c', axes: '#394553',
@@ -1646,6 +1671,33 @@ function initializeTheme(plot) {
 module.exports = {names: Object.keys(presets), resolvedTheme, themeColors, updateTheme, initializeTheme};
 
 },{}],6:[function(require,module,exports){
+// Share pointer redraws across helpers, including plots with autoRender disabled.
+function watchPointer(plot) {
+    if (plot.hotAndReadyEventListeners.tooltips) return;
+    const redraw = () => plot.renderPlot();
+    plot.canvas.addEventListener('mousemove', redraw);
+    plot.canvas.addEventListener('mouseleave', redraw);
+    plot.hotAndReadyEventListeners.tooltips = redraw;
+}
+
+function hasPointer(plot) {
+    return Number.isFinite(plot.mouseX) && Number.isFinite(plot.mouseY) &&
+        plot.mouseX >= plot.xmin && plot.mouseX <= plot.xmax &&
+        plot.mouseY >= plot.ymin && plot.mouseY <= plot.ymax;
+}
+
+function showTooltip(plot, draw, settings, hit) {
+    if (!hit || settings.showTooltips === false || !hasPointer(plot)) return;
+    const info = Object.fromEntries(Object.entries(hit.info).map(([key, value]) => [key,
+        settings.tooltipFormatters?.[key] ? String(settings.tooltipFormatters[key](value, hit.index)) :
+            typeof value === 'number' ? String(Number(value.toPrecision(6))) : String(value)
+    ]));
+    draw.call(plot, plot.mouseX, plot.mouseY, info);
+}
+
+module.exports = {watchPointer, hasPointer, showTooltip};
+
+},{}],7:[function(require,module,exports){
 let defaultColors = ["red", "green","orange", "blue", "purple", "yellow"];
 
 function zip(xs,ys){

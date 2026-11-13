@@ -20,6 +20,7 @@ const plot = document.querySelector('#gallery-lines');
 // plot.setAttribute('default-axes-on', 'false');
 plot.drawingLoop = () => {
   plot.hotAndReady.linePlot(data, {
+    // showTooltips: false, // Uncomment to hide hover values.
     title: 'A couple of waves',
     xLabel: 'x', yLabel: 'Amplitude',
     inputs: ['xs', 'xs'],
@@ -43,6 +44,7 @@ const data = {
 };
 plot.drawingLoop = () => {
   plot.hotAndReady.barPlot(data, {
+    // showTooltips: false, // Uncomment to hide hover values.
     title: 'Bake sale',
     xLabel: 'Dessert', yLabel: 'Sold',
     legendLabels: data.bars,

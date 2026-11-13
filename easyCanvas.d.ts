@@ -1,5 +1,7 @@
 /** Types for the existing classic-script browser bundle. No runtime exports. */
 export interface PlotLabels {
+  /** Hover values are shown by default on every chart helper. */
+  showTooltips?: boolean;
   axes?: boolean;
   showTitle?: boolean;
   showAxisLabels?: boolean;
@@ -65,6 +67,8 @@ export interface AxisSettings extends Pick<TimeAxisOptions, "locale" | "timeZone
   isDatetime?: boolean;
 }
 export interface ChartSettings extends PlotLabels, DefaultAxesSettings {
+  /** Format tooltip fields such as Value, X, Y, Count or Median. */
+  tooltipFormatters?: Record<string, (value: number | string, index: number) => string>;
   color?: string;
   axes?: boolean;
 }
@@ -82,7 +86,7 @@ export interface PieSettings extends PlotLabels {
   startAngle?: number;
   showLabels?: boolean;
   showLegend?: boolean;
-  showTooltips?: boolean;
+  tooltipFormatters?: Record<string, (value: number | string, index: number) => string>;
   labelFormatter?: (value: number, index: number, fraction: number) => string;
   tooltipFormatter?: (value: number, index: number, fraction: number) => string;
   labelColor?: string;

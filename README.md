@@ -119,7 +119,9 @@ Open any gallery title in the [playground](https://jackeown.github.io/EasyCanvas
 
 Load `easyCanvasRichText.js` after the bundle for optional rich text and on-demand drawing. Call `enhanceEasyCanvas(plot, {richText})`, then `plot.requestRender()` after changes. The callback can draw the text and return true, or return false for normal canvas text. `plot.disposeRichRendering()` restores the normal drawing loop.
 
-Pie and donut charts include legends and hover tooltips by default. Use `showLabels`, `showLegend`, and `showTooltips` to control them individually. `labelFormatter(value, index, fraction)` and `tooltipFormatter(value, index, fraction)` customize the text.
+Every classic chart includes hover tooltips by default. Set `showTooltips: false` to hide them; `tooltipFormatters` maps displayed field names to `(value, index) => string` callbacks. Line plots use data column names, while other helpers use fields such as `Value`, `Count`, `X`, `Y`, or `Median`. Hover values update even with automatic rendering disabled.
+
+Pie and donut charts also include legends by default. Use `showLabels`, `showLegend`, and `showTooltips` to control them individually. `labelFormatter(value, index, fraction)` and `tooltipFormatter(value, index, fraction)` customize the text.
 
 The playground has a scrolling line-number gutter. Ctrl+/ (Cmd+/ on macOS) toggles comments on the current line or selected lines, using JavaScript line comments and HTML/CSS block comments.
 

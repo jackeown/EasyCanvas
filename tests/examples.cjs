@@ -396,3 +396,62 @@ for (const [index, expected] of [[0,[0,1]], [1,[0,4]], [2,[1,6]], [3,[1,2]], [4,
     assert.ok(Math.abs(secondBand[index][0] - expected[0]) < 1e-9);
     assert.ok(Math.abs(secondBand[index][1] - expected[1]) < 1e-9, 'Stacked fills return along the previous series, rather than the baseline');
 }
+
+// Every classic chart shows useful values by default and honors one off switch.
+function checkHover(method, data, options, pointer, expected, label) {
+    const plot = document.createElement('easy-canvas');
+    plot.debug = false;
+    plot.fixDPI();
+    const settings = {...options};
+    plot.drawingLoop = () => plot.hotAndReady[method](data, settings);
+    plot.renderPlot();
+    [plot.mouseX, plot.mouseY] = pointer;
+    textLabels.length = 0;
+    plot.renderPlot();
+    for (const text of expected) assert.ok(textLabels.includes(text), method + ': hover contains ' + text);
+    settings.showTooltips = false;
+    textLabels.length = 0;
+    plot.renderPlot();
+    assert.ok(!textLabels.includes(label), method + ': showTooltips=false hides tooltip');
+    settings.showTooltips = true;
+    plot.mouseX = plot.mouseY = undefined;
+    textLabels.length = 0;
+    plot.renderPlot();
+    assert.ok(!textLabels.includes(label), method + ': pointer exit clears tooltip');
+    assert.ok(plot.hotAndReadyEventListeners.tooltips, method + ': static plots redraw on hover');
+    return {plot, settings};
+}
+checkHover('linePlot', {xs:[0,1,2], ys:[0,3,0]}, {}, [1,3], ['ys: ', '3.000'], 'ys: ');
+checkHover('linePlot', {a:[0,2], b:[0,1,2], one:[0,1], two:[0,3,0]},
+    {inputs:['a','b'],outputs:['one','two']}, [1,3], ['b: ', 'two: ', '3.000'], 'two: ');
+const barHover = checkHover('barPlot', {bars:['Cake','Pie'], heights:[10,20]}, {}, [1/3,5], ['Category: ', 'Cake', 'Value: ', '10'], 'Category: ');
+barHover.settings.tooltipFormatters = {Value:(value,index) => `Sold ${value} from bar ${index}`};
+barHover.plot.mouseX=1/3; barHover.plot.mouseY=5; textLabels.length=0; barHover.plot.renderPlot();
+assert.ok(textLabels.includes('Sold 10 from bar 0'), 'Field formatters receive the value and original item index');
+checkHover('histogram', [0,0.2,0.8,1], {range:[0,1],bins:2,density:true}, [0.25,0.5],
+    ['Bin start: ', 'Bin end: ', 'Count: ', '2', 'Density: ', '1'], 'Count: ');
+checkHover('boxPlot', {A:[1,2,3,4,5,30]}, {}, [1,3],
+    ['Group: ', 'A', 'Median: ', '3.5', 'Q1: ', '2.25', 'Lower whisker: ', 'Upper whisker: '], 'Median: ');
+checkHover('boxPlot', {A:[1,2,3,4,5,30]}, {}, [1,30], ['Outlier: ', '30'], 'Outlier: ');
+const scatterHover = checkHover('scatterPlot', {xs:[0,1,2],ys:[0,3,0]}, {}, [1,3], ['X: ', 'Y: ', '3'], 'X: ');
+scatterHover.plot.mouseX=0.5;scatterHover.plot.mouseY=1; textLabels.length=0;scatterHover.plot.renderPlot();
+assert.ok(!textLabels.includes('X: '), 'Scatter background does not trigger a tooltip');
+checkHover('bubblePlot', {xs:[0,1,2],ys:[0,2,4],radii:[4,20,4]}, {}, [1,2], ['Radius: ', '20'], 'Radius: ');
+checkHover('areaPlot', {xs:[0,1],first:[2,4],second:[3,5]}, {outputs:['first','second'],stacked:true}, [0.5,4],
+    ['Series: ', 'second', 'Y: ', '5', 'Bottom: ', '4', 'Top: ', '9'], 'Series: ');
+checkHover('areaPlot', {xs:[0,1],ys:[[2,4],[3,5]]}, {}, [0.5,2], ['Series: ', 'Series 2'], 'Series: ');
+const heatHover = checkHover('heatmap', [[1,null],[3,4]], {}, [0.5,1.5], ['Row: ', '0', 'Column: ', 'Value: ', '1'], 'Column: ');
+heatHover.plot.mouseX=1.5;heatHover.plot.mouseY=1.5;textLabels.length=0;heatHover.plot.renderPlot();
+assert.ok(!textLabels.includes('Value: '), 'Missing heatmap cells have no tooltip');
+heatHover.plot.mouseX=0.5;heatHover.plot.mouseY=0.5;textLabels.length=0;heatHover.plot.renderPlot();
+assert.ok(textLabels.includes('3'), 'Heatmap lookup respects top-to-bottom row order');
+console.log('PASS: all classic tooltip defaults, opt-outs, field formatting, signed stacks, outliers and missing cells.');
+checkHover('linePlot', {xs:[0,2],ys:[0,4]}, {}, [1,2], ['ys: ', '4.000'], 'ys: ');
+checkHover('boxPlot', {A:[1,2,3,4,5,30]}, {}, [1.2,5], ['Upper whisker: ', '5'], 'Upper whisker: ');
+checkHover('areaPlot', {xs:[0,1],ys:[[-2,-4],[-3,-5]]}, {stacked:true}, [0.5,-4],
+    ['Series: ', 'Series 2', 'Y: ', '-5', 'Bottom: ', '-4', 'Top: ', '-9'], 'Series: ');
+const noLineTips = checkHover('linePlot', {xs:[0,1],ys:[2,3]}, {}, [1,3], ['ys: '], 'ys: ');
+noLineTips.settings.tooltips=[];noLineTips.plot.mouseX=1;noLineTips.plot.mouseY=3;
+textLabels.length=0;noLineTips.plot.renderPlot();
+assert.ok(!textLabels.includes('ys: '), 'Legacy empty tooltips array still disables line hover');
+console.log('PASS: sparse line segments, whisker caps, negative stack values and legacy opt-outs.');

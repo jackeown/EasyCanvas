@@ -180,13 +180,32 @@ plot.drawingLoop = () => {
 const plot = document.querySelector('#gallery-histogram');
 // Pan and zoom are on by default. Uncomment to disable them:
 // plot.setAttribute('controls', 'false');
-// Hide helper axes with { axes: false }, or custom axes with:
-// plot.setAttribute('default-axes-on', 'false');
 const values = Array.from({length: 180}, (_, i) =>
   60 + 13 * Math.sin(i * 2.4) + 9 * Math.cos(i * 0.71) + 6 * Math.sin(i * 0.37));
+
+// Uncomment ONE assignment below to switch views. Ctrl+/ toggles comments.
+let view = {kde: true, showHistogram: true}; // Both
+// view = {kde: false, showHistogram: true}; // Histogram only
+// view = {kde: true, showHistogram: false}; // KDE only
+
+// Automatic bandwidth by default. Smaller = more detail; larger = smoother.
+let bandwidth; // In the same units as the data (Score).
+// bandwidth = 1.5;
+// bandwidth = 6;
+
+let density = true; // Comparable units in every view.
+// density = false; // Counts; KDE scales to expected count per bin.
+
 plot.drawingLoop = () => plot.hotAndReady.histogram(values, {
-  // showTooltips: false, // Uncomment to hide hover values.
-  bins: 12, xLabel: 'Score', yLabel: 'Count',
+  ...view, bandwidth,
+  bins: 12,
+  density,
+  // kdeColor: '#df6846', kdeLineWidth: 3,
+  // kdePoints: 401, // More samples for the curve (default 201).
+  // range: [30, 90], // Limit both views to samples in this range.
+  // showTooltips: false, // Hover bins or the curve to inspect values.
+  // axes: false, showLegend: false, // Hide these parts if you want.
+  xLabel: 'Score', yLabel: density ? 'Density' : 'Count',
 });
 }
 {

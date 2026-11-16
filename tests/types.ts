@@ -53,3 +53,6 @@ plot.hotAndReady.barPlot(bars, {tooltipFormatters:{Value:(value,index) => `${ind
 plot.hotAndReady.areaPlot({xs:[0,1],ys:[2,3]}, {showTooltips:true,tooltipFormatters:{Y:value => `${value} kW`}});
 plot.hotAndReady.histogram([1,2], {tooltipFormatters:{Count:value => `${value} observations`}});
 plot.hotAndReady.pieChart([1,2], {tooltipFormatters:{Value:value => `${value} kg`}});
+plot.hotAndReady.histogram([1,2,3], {kde:true, showHistogram:false, bandwidth:.5, kdePoints:401, kdeColor:'red', kdeLineWidth:3});
+// @ts-expect-error Bandwidth is in numeric data units.
+plot.hotAndReady.histogram([1,2], {bandwidth:'auto'});

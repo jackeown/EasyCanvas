@@ -119,6 +119,8 @@ Open any gallery title in the [playground](https://jackeown.github.io/EasyCanvas
 
 Load `easyCanvasRichText.js` after the bundle for optional rich text and on-demand drawing. Call `enhanceEasyCanvas(plot, {richText})`, then `plot.requestRender()` after changes. The callback can draw the text and return true, or return false for normal canvas text. `plot.disposeRichRendering()` restores the normal drawing loop.
 
+Histograms also support a Gaussian KDE: `{kde: true}` shows bars and a smooth curve; add `showHistogram: false` for KDE only. Set `bandwidth` to control smoothing, or leave it automatic. KDE defaults to density units; an explicit `density: false` scales it to counts per bin. The [histogram playground](https://jackeown.github.io/EasyCanvas/playground.html?example=histogram) has commented switches for all three views.
+
 Every classic chart includes hover tooltips by default. Set `showTooltips: false` to hide them; `tooltipFormatters` maps displayed field names to `(value, index) => string` callbacks. Line plots use data column names, while other helpers use fields such as `Value`, `Count`, `X`, `Y`, or `Median`. Hover values update even with automatic rendering disabled.
 
 Pie and donut charts also include legends by default. Use `showLabels`, `showLegend`, and `showTooltips` to control them individually. `labelFormatter(value, index, fraction)` and `tooltipFormatter(value, index, fraction)` customize the text.

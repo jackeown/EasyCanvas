@@ -73,6 +73,16 @@ export interface ChartSettings extends PlotLabels, DefaultAxesSettings {
   axes?: boolean;
 }
 export interface HistogramSettings extends ChartSettings {
+  /** Add a Gaussian KDE; density scaling is then the default unless explicitly overridden. */
+  kde?: boolean;
+  /** Hide the bars, for example with kde: true to show only the density curve. */
+  showHistogram?: boolean;
+  /** Gaussian bandwidth in data units; robust Silverman rule by default. */
+  bandwidth?: number;
+  /** Number of curve samples, 16–2048; default 201. */
+  kdePoints?: number;
+  kdeColor?: string;
+  kdeLineWidth?: number;
   bins?: number;
   range?: [number, number];
   density?: boolean;

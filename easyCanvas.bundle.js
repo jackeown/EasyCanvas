@@ -695,10 +695,12 @@ class EasyCanvas extends HTMLElement {
 
 customElements.define('easy-canvas', EasyCanvas);
 
-},{"./easyCanvasHotAndReady.js":3,"./easyCanvasLayout.js":4,"./easyCanvasTheme.js":5,"./helpers.js":7}],2:[function(require,module,exports){
+},{"./easyCanvasHotAndReady.js":4,"./easyCanvasLayout.js":5,"./easyCanvasTheme.js":6,"./helpers.js":8}],2:[function(require,module,exports){
 const {watchPointer, hasPointer, showTooltip} = require('./easyCanvasTooltips.js');
 const chartBounds = new WeakMap();
 const radialBounds = new WeakMap();
+const densityCache = new WeakMap();
+const {gaussianKDE} = require('./easyCanvasDensity.js');
 const finite = value => typeof value === 'number' && Number.isFinite(value);
 
 function extent(values) {
@@ -768,21 +770,68 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
             if (value >= min && value <= max) counts[Math.min(bins - 1, Math.floor((value - min) / width))]++;
         }
         const total = counts.reduce((sum, count) => sum + count, 0);
+        const density = settings.density ?? Boolean(settings.kde);
+        const showHistogram = settings.showHistogram !== false;
         const bars = counts.map((count, i) => ({
             min: min + i * width,
             max: i === bins - 1 ? max : min + (i + 1) * width,
             count,
-            height: settings.density && total ? count / (total * width) : count
+            height: density && total ? count / (total * width) : count
         }));
+        let curve;
+        if (settings.kde && total) {
+            const samples = values.filter(value => value >= min && value <= max);
+            const key = JSON.stringify([samples, settings.bandwidth, settings.kdePoints, settings.range]);
+            let cached = densityCache.get(this);
+            if (cached?.key !== key) {
+                cached = {key, curve:gaussianKDE(samples, {bandwidth:settings.bandwidth,
+                    points:settings.kdePoints, range:settings.range})};
+                densityCache.set(this, cached);
+            }
+            const factor = density ? 1 : total * width;
+            curve = {...cached.curve, ys:cached.curve.ys.map(y => y * factor)};
+        }
+        const histogramColor = color(this, settings);
+        const kdeColor = settings.kdeColor ?? color(this, {...settings, color:undefined}, 1);
+        const labels = settings.legendLabels ?? (settings.kde ? [
+            ...(showHistogram ? ['Histogram'] : []), ...(curve ? ['KDE'] : [])
+        ] : []);
+        const chartSettings = {...settings, legendLabels:labels,
+            colors:[...(showHistogram ? [histogramColor] : []), ...(curve ? [kdeColor] : [])]};
         const gap = Math.max(0, Math.min(0.9, settings.gap ?? 0.06)) * width / 2;
-        cartesian(this, 'histogram', [min, max, 0, Math.max(...bars.map(bar => bar.height), settings.density ? Number.EPSILON : 1) * 1.08], settings, () => {
-            this.ctx.fillStyle = color(this, settings);
+        const highest = Math.max(0, ...(showHistogram ? bars.map(bar => bar.height) : []), ...(curve?.ys ?? []));
+        cartesian(this, 'histogram', [
+            curve ? Math.min(curve.xs[0], showHistogram ? min : Infinity) : min,
+            curve ? Math.max(curve.xs.at(-1), showHistogram ? max : -Infinity) : max, 0,
+            (highest || (density ? 1 : Math.max(1, total))) * 1.08], chartSettings, () => {
+            this.ctx.fillStyle = histogramColor;
             let hit;
-            for (const [index, bar] of bars.entries()) {
+            if (showHistogram) for (const [index, bar] of bars.entries()) {
                 pixelRect(this, bar.min + gap, 0, bar.max - gap, bar.height);
                 if (this.mouseInRect(bar.min + gap, 0, bar.max - gap, bar.height)) {
                     hit = {index, info:{'Bin start':bar.min, 'Bin end':bar.max, Count:bar.count,
-                        ...(settings.density ? {Density:bar.height} : {})}};
+                        ...(density ? {Density:bar.height} : {})}};
+                }
+            }
+            if (curve) {
+                this.ctx.strokeStyle = kdeColor;
+                this.drawLine(curve, settings.kdeLineWidth ?? 2 * this.dpr);
+                if (hasPointer(this)) {
+                    let distance = 8 * this.dpr;
+                    for (let i = 0; i < curve.xs.length - 1; i++) {
+                        const x = this.scaleX(curve.xs[i]), y = this.scaleY(curve.ys[i]);
+                        const dx = this.scaleX(curve.xs[i + 1]) - x, dy = this.scaleY(curve.ys[i + 1]) - y;
+                        const length = dx * dx + dy * dy;
+                        const mix = length ? Math.max(0, Math.min(1, ((this.scaleX(this.mouseX) - x) * dx +
+                            (this.scaleY(this.mouseY) - y) * dy) / length)) : 0;
+                        const next = Math.hypot(x + dx * mix - this.scaleX(this.mouseX), y + dy * mix - this.scaleY(this.mouseY));
+                        if (next <= distance) {
+                            distance = next;
+                            hit = {index:i, info:{Series:'KDE', X:curve.xs[i] + (curve.xs[i + 1] - curve.xs[i]) * mix,
+                                [density ? 'Density' : 'Estimated count']:curve.ys[i] + (curve.ys[i + 1] - curve.ys[i]) * mix,
+                                Bandwidth:curve.bandwidth}};
+                        }
+                    }
                 }
             }
             return hit;
@@ -1084,7 +1133,51 @@ module.exports = function createChartHelpers(decorate, drawTooltip) {
     return {histogram, pieChart, donutChart, boxPlot, scatterPlot, bubblePlot: scatterPlot, areaPlot, heatmap};
 };
 
-},{"./easyCanvasTooltips.js":6}],3:[function(require,module,exports){
+},{"./easyCanvasDensity.js":3,"./easyCanvasTooltips.js":7}],3:[function(require,module,exports){
+// Gaussian kernel density estimate. Computed once per data/settings change.
+function gaussianKDE(values, {bandwidth, points = 201, range} = {}) {
+    if (!Number.isInteger(points) || points < 16 || points > 2048) {
+        throw new RangeError('kdePoints must be an integer from 16 to 2048');
+    }
+    if (!values.length) return {xs:[], ys:[], bandwidth:0};
+    const sorted = [...values].sort((a, b) => a - b);
+    if (bandwidth === undefined) {
+        let mean = 0, sum = 0;
+        values.forEach((value, i) => {
+            const delta = value - mean;
+            mean += delta / (i + 1);
+            sum += delta * (value - mean);
+        });
+        const deviation = Math.sqrt(Math.max(0, sum / Math.max(1, values.length - 1)));
+        const quantile = fraction => {
+            const index = (sorted.length - 1) * fraction;
+            const lower = Math.floor(index);
+            return sorted[lower] + (sorted[Math.ceil(index)] - sorted[lower]) * (index - lower);
+        };
+        const robust = (quantile(0.75) - quantile(0.25)) / 1.34;
+        const scale = deviation > 0 && robust > 0 ? Math.min(deviation, robust) : deviation ||
+            Math.max(1, Math.abs(mean)) * 0.1;
+        bandwidth = 0.9 * scale * values.length ** -0.2;
+    }
+    if (!Number.isFinite(bandwidth) || bandwidth <= 0) throw new RangeError('bandwidth must be a positive finite number');
+    const min = range?.[0] ?? sorted[0] - 3 * bandwidth;
+    const max = range?.[1] ?? sorted.at(-1) + 3 * bandwidth;
+    if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min || !Number.isFinite(max - min)) {
+        throw new RangeError('KDE range must contain two increasing finite bounds');
+    }
+    const xs = Array.from({length:points}, (_, i) => min + (max - min) * i / (points - 1));
+    const normalizer = values.length * bandwidth * Math.sqrt(2 * Math.PI);
+    const ys = xs.map(x => {
+        let sum = 0;
+        for (const value of values) sum += Math.exp(-0.5 * ((x - value) / bandwidth) ** 2);
+        return sum / normalizer;
+    });
+    return {xs, ys, bandwidth};
+}
+
+module.exports = {gaussianKDE};
+
+},{}],4:[function(require,module,exports){
 /* this file contains functions for making very common plots using easyCanvas */
 /* they will be made accessable via EasyCanvas.hotAndReady */
 
@@ -1489,7 +1582,7 @@ module.exports = {
     ...require('./easyCanvasCharts.js')(drawLegendAxesLabelsAndTitle, drawTooltip)
 };
 
-},{"./easyCanvasCharts.js":2,"./easyCanvasLayout.js":4,"./easyCanvasTooltips.js":6,"./helpers.js":7}],4:[function(require,module,exports){
+},{"./easyCanvasCharts.js":2,"./easyCanvasLayout.js":5,"./easyCanvasTooltips.js":7,"./helpers.js":8}],5:[function(require,module,exports){
 const {getTimeLabel} = require('./helpers.js');
 
 function tickLabel(plot, value) {
@@ -1597,7 +1690,7 @@ function updateLayout(plot, settings = {}) {
 
 module.exports = {updateLayout, tickLabel, niceTicks};
 
-},{"./helpers.js":7}],5:[function(require,module,exports){
+},{"./helpers.js":8}],6:[function(require,module,exports){
 const presets = {
     light: {
         background: '#ffffff', foreground: '#20272c', axes: '#394553',
@@ -1670,7 +1763,7 @@ function initializeTheme(plot) {
 
 module.exports = {names: Object.keys(presets), resolvedTheme, themeColors, updateTheme, initializeTheme};
 
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 // Share pointer redraws across helpers, including plots with autoRender disabled.
 function watchPointer(plot) {
     if (plot.hotAndReadyEventListeners.tooltips) return;
@@ -1697,7 +1790,7 @@ function showTooltip(plot, draw, settings, hit) {
 
 module.exports = {watchPointer, hasPointer, showTooltip};
 
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 let defaultColors = ["red", "green","orange", "blue", "purple", "yellow"];
 
 function zip(xs,ys){
